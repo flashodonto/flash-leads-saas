@@ -1,984 +1,4 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flash Leads SaaS - Gestão de Leads Profissional</title>
-    
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        /* Auth Screens */
-        .auth-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .auth-card {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .auth-card h1 {
-            color: #2c3e50;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-        }
-
-        .auth-card p {
-            color: #7f8c8d;
-            margin-bottom: 30px;
-            font-size: 1.1em;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #2c3e50;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #3498db;
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: #f8f9fa;
-            color: #2c3e50;
-            border: 2px solid #e9ecef;
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #27ae60, #229954);
-            color: white;
-            font-size: 14px;
-            padding: 8px 16px;
-        }
-
-        .btn-info {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-            font-size: 14px;
-            padding: 8px 16px;
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, #f39c12, #e67e22);
-            color: white;
-            font-size: 14px;
-            padding: 8px 16px;
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            color: white;
-            font-size: 14px;
-            padding: 8px 16px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .auth-switch {
-            margin-top: 20px;
-            color: #7f8c8d;
-        }
-
-        .auth-switch a {
-            color: #3498db;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .auth-switch a:hover {
-            text-decoration: underline;
-        }
-
-        /* Main App Container */
-        .container {
-            display: none;
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-            color: white;
-            padding: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            font-weight: 300;
-        }
-
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-        }
-
-        .controls {
-            padding: 30px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .controls-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .search-container {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .search-input {
-            padding: 12px 16px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            width: 250px;
-            transition: border-color 0.3s ease;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #3498db;
-        }
-
-        .status-filter {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .status-filter select {
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .stat-number {
-            font-size: 2em;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
-        .stat-label {
-            font-size: 0.9em;
-            color: #7f8c8d;
-            margin-top: 5px;
-        }
-
-        .period-filter {
-            margin-bottom: 15px;
-        }
-
-        .period-btn {
-            font-size: 14px;
-            padding: 8px 16px;
-            transition: all 0.3s ease;
-        }
-
-        .period-btn.active {
-            background: linear-gradient(135deg, #27ae60, #229954);
-            color: white;
-            transform: translateY(-1px);
-            box-shadow: 0 3px 10px rgba(39, 174, 96, 0.3);
-        }
-
-        .period-btn:not(.active):hover {
-            background: linear-gradient(135deg, #74b9ff, #0984e3);
-        }
-
-        .table-container {
-            padding: 30px;
-            overflow-x: auto;
-        }
-
-        .leads-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .leads-table th {
-            background: linear-gradient(135deg, #34495e, #2c3e50);
-            color: white;
-            padding: 15px;
-            text-align: left;
-            font-weight: 500;
-        }
-
-        .leads-table td {
-            padding: 15px;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .leads-table tr:hover {
-            background: #f8f9fa;
-        }
-
-        .status-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .status-novo {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .status-agendado {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-compareceu {
-            background: #d1e7dd;
-            color: #0a3622;
-        }
-
-        .status-faltou {
-            background: #f8d7da;
-            color: #58151c;
-        }
-
-        .actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-        }
-
-        .modal-content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #e9ecef;
-            padding-bottom: 15px;
-        }
-
-        .modal-header h3 {
-            color: #2c3e50;
-            font-size: 1.5em;
-        }
-
-        .close {
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            color: #999;
-            transition: color 0.3s;
-        }
-
-        .close:hover {
-            color: #333;
-        }
-
-        .no-leads {
-            text-align: center;
-            padding: 40px;
-            color: #7f8c8d;
-        }
-
-        .no-leads h3 {
-            margin-bottom: 10px;
-        }
-
-        /* Loading Spinner */
-        .loading {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 40px;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Responsividade */
-        @media (max-width: 1024px) {
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .stats {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 12px;
-            }
-            
-            .search-input {
-                width: 200px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-
-            .header {
-                padding: 20px;
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
-
-            .header h1 {
-                font-size: 1.8em;
-            }
-
-            .header p {
-                font-size: 1em;
-            }
-
-            .controls {
-                padding: 20px;
-            }
-
-            .controls-top {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 15px;
-            }
-
-            .search-container {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .search-input {
-                width: 100%;
-            }
-
-            .status-filter {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 8px;
-            }
-
-            .stats {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 10px;
-            }
-
-            .stat-card {
-                padding: 15px;
-            }
-
-            .stat-number {
-                font-size: 1.5em;
-            }
-
-            .table-container {
-                padding: 15px;
-                overflow-x: auto;
-            }
-
-            .leads-table {
-                font-size: 14px;
-                min-width: 700px;
-            }
-
-            .leads-table th,
-            .leads-table td {
-                padding: 12px 8px;
-            }
-
-            .actions {
-                flex-direction: column;
-                gap: 4px;
-                min-width: 60px;
-            }
-
-            .modal-content {
-                width: 95%;
-                margin: 10px;
-                padding: 20px;
-            }
-
-            .btn {
-                padding: 14px 20px;
-                font-size: 16px;
-            }
-
-            .period-filter {
-                text-align: center;
-            }
-
-            .period-filter > div {
-                justify-content: center;
-            }
-        }
-
-        @media (max-width: 480px) {
-            body {
-                padding: 5px;
-            }
-
-            .stats {
-                grid-template-columns: 1fr;
-            }
-
-            .header h1 {
-                font-size: 1.5em;
-            }
-
-            .header {
-                padding: 15px;
-            }
-
-            .controls {
-                padding: 15px;
-            }
-
-            .table-container {
-                padding: 10px;
-            }
-
-            .leads-table {
-                min-width: 600px;
-                font-size: 12px;
-            }
-
-            .btn {
-                padding: 12px 16px;
-                font-size: 14px;
-            }
-        }
-
-        /* Tablet Portrait */
-        @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
-            .stats {
-                grid-template-columns: repeat(4, 1fr);
-            }
-            
-            .controls-top {
-                flex-direction: row;
-                flex-wrap: wrap;
-                justify-content: space-between;
-            }
-            
-            .search-container {
-                flex: 1;
-                min-width: 300px;
-            }
-        }
-
-        /* Tablet Landscape */
-        @media (min-width: 1024px) and (max-width: 1200px) and (orientation: landscape) {
-            .stats {
-                grid-template-columns: repeat(4, 1fr);
-            }
-            
-            .header {
-                flex-direction: row;
-            }
-        }
-
-        /* Reports Modal Styles */
-        .reports-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .report-card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            text-align: center;
-            border-left: 4px solid #3498db;
-        }
-
-        .report-number {
-            font-size: 2em;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-
-        .report-label {
-            color: #7f8c8d;
-            font-size: 0.9em;
-        }
-
-        .chart-container {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-
-        .chart-bar {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            gap: 10px;
-        }
-
-        .chart-label {
-            min-width: 120px;
-            font-size: 14px;
-            color: #2c3e50;
-        }
-
-        .chart-progress {
-            flex: 1;
-            height: 20px;
-            background: #ecf0f1;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .chart-fill {
-            height: 100%;
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            border-radius: 10px;
-            transition: width 0.3s ease;
-        }
-
-        .chart-value {
-            min-width: 40px;
-            font-weight: bold;
-            color: #2c3e50;
-            font-size: 14px;
-        }
-
-        .insights-container {
-            background: #e8f5e8;
-            padding: 20px;
-            border-radius: 10px;
-            border-left: 4px solid #27ae60;
-        }
-
-        .insights-container h4 {
-            color: #27ae60;
-            margin-bottom: 15px;
-        }
-
-        .insights-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        .insights-list li {
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(39, 174, 96, 0.1);
-            color: #2c3e50;
-        }
-
-        .insights-list li:before {
-            content: "💡 ";
-            margin-right: 8px;
-        }
-
-        /* Alert Messages */
-        .alert {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-    </style>
-</head>
-<body>
-    <!-- Authentication Screen -->
-    <div id="authScreen" class="auth-container">
-        <div class="auth-card">
-            <h1>⚡ Flash Leads</h1>
-            <p>Sistema Profissional de Gestão de Leads</p>
-            
-            <!-- Login Form -->
-            <div id="loginForm">
-                <div class="form-group">
-                    <label for="loginEmail">Email</label>
-                    <input type="email" id="loginEmail" placeholder="seu@email.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="loginPassword">Senha</label>
-                    <input type="password" id="loginPassword" placeholder="••••••••" required>
-                </div>
-                <button class="btn btn-primary" onclick="handleLogin()" style="width: 100%; margin-bottom: 15px;">
-                    Entrar
-                </button>
-                <button class="btn btn-secondary" onclick="loginWithGoogle()" style="width: 100%; margin-bottom: 15px;">
-                    🔍 Entrar com Google
-                </button>
-                <div class="auth-switch">
-                    Não tem conta? <a href="#" onclick="showRegister()">Criar conta</a>
-                </div>
-            </div>
-
-            <!-- Register Form -->
-            <div id="registerForm" style="display: none;">
-                <div class="form-group">
-                    <label for="registerName">Nome Completo</label>
-                    <input type="text" id="registerName" placeholder="Seu nome" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerEmail">Email</label>
-                    <input type="email" id="registerEmail" placeholder="seu@email.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerPassword">Senha</label>
-                    <input type="password" id="registerPassword" placeholder="••••••••" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerClinic">Nome da Clínica</label>
-                    <input type="text" id="registerClinic" placeholder="Sua clínica" required>
-                </div>
-                <button class="btn btn-primary" onclick="handleRegister()" style="width: 100%; margin-bottom: 15px;">
-                    Criar Conta
-                </button>
-                <div class="auth-switch">
-                    Já tem conta? <a href="#" onclick="showLogin()">Fazer login</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Application -->
-    <div id="mainApp" class="container">
-        <div class="header">
-            <div class="header-left">
-                <div>
-                    <h1>⚡ Flash Leads</h1>
-                    <p>Sistema Inteligente de Gestão de Leads Odontológicos</p>
-                </div>
-            </div>
-            <div class="user-info">
-                <div class="user-avatar" id="userAvatar">U</div>
-                <span id="userName">Usuário</span>
-                <button class="btn btn-secondary" onclick="logout()" style="margin-left: 15px; padding: 8px 16px; width: auto;">
-                    Sair
-                </button>
-            </div>
-        </div>
-
-        <div class="controls">
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-number" id="totalLeads">0</div>
-                    <div class="stat-label">Total de Leads</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="novosLeads">0</div>
-                    <div class="stat-label">Leads Novos</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="agendadosLeads">0</div>
-                    <div class="stat-label">Agendados</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="compareceuLeads">0</div>
-                    <div class="stat-label">Compareceram</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="faltouLeads">0</div>
-                    <div class="stat-label">Faltaram</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="leadsMes">0</div>
-                    <div class="stat-label">Leads Este Mês</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="taxaAgendamento">0%</div>
-                    <div class="stat-label">Taxa de Agendamento</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="taxaComparecimento">0%</div>
-                    <div class="stat-label">Taxa de Comparecimento</div>
-                </div>
-            </div>
-
-            <div class="controls-top">
-                <div class="search-container">
-                    <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar por nome ou telefone...">
-                    <div class="status-filter">
-                        <label>Filtrar por status:</label>
-                        <select id="statusFilter">
-                            <option value="">Todos os status</option>
-                            <option value="novo">Novo</option>
-                            <option value="agendado">Agendado</option>
-                            <option value="compareceu">Compareceu</option>
-                            <option value="faltou">Faltou</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="period-filter">
-                    <label><strong>Filtrar por período:</strong></label>
-                    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center;">
-                        <button class="btn btn-info period-btn active" data-period="all" onclick="filterByPeriod('all')">
-                            Todos
-                        </button>
-                        <button class="btn btn-info period-btn" data-period="today" onclick="filterByPeriod('today')">
-                            Hoje
-                        </button>
-                        <button class="btn btn-info period-btn" data-period="week" onclick="filterByPeriod('week')">
-                            Esta Semana
-                        </button>
-                        <button class="btn btn-info period-btn" data-period="month" onclick="filterByPeriod('month')">
-                            Este Mês
-                        </button>
-                        <button class="btn btn-info period-btn" data-period="quarter" onclick="filterByPeriod('quarter')">
-                            Trimestre
-                        </button>
-                    </div>
-                </div>
-                
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn btn-primary" onclick="openAddLeadModal()">
-                        ➕ Adicionar Novo Lead
-                    </button>
-                    <button class="btn btn-info" onclick="showSettingsModal()">
-                        ⚙️ Configurações
-                    </button>
-                    <button class="btn btn-warning" onclick="showReportsModal()">
-                        📊 Relatórios
-                    </button>
-                    <button class="btn btn-success" onclick="refreshSystem()">
-                        🔄 Atualizar
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div class="table-container">
-            <table class="leads-table">
-                <thead>
-                    <tr>
-                        <th>Nome do Paciente</th>
-                        <th>Telefone</th>
-                        <th>Procedimento</th>
-                        <th>Data de Entrada</th>
-                        <th>Status</th>
-                        <th>Observações</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="leadsTableBody">
-                    <tr class="no-leads">
-                        <td colspan="7">
-                            <div class="loading">
-                                <div class="spinner"></div>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Add Lead Modal -->
-    <div id="addLeadModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">Adicionar Novo Lead</h3>
-                <span class="close" onclick="closeModal('addLeadModal')">&times;</span>
-            </div>
-            <form id="leadForm">
-                <div class="form-group">
-                    <label for="patientName">Nome do Paciente *</label>
-                    <input type="text" id="patientName" required>
-                </div>
-                <div class="form-group">
-                    <label for="phone">Telefone *</label>
-                    <input type="tel" id="phone" required>
-                </div>
-                <div class="form-group">
-                    <label for="procedure">Procedimento Desejado *</label>
-                    <select id="procedure" required>
-                        <option value="">Selecione o procedimento</option>
-                        <option value="Limpeza/Profilaxia">Limpeza/Profilaxia</option>
-                        <option value="Clareamento">Clareamento</option>
-                        <option value="Implante">Implante</option>
-                        <option value="Ortodontia">Ortodontia</option>
-                        <option value="Prótese">Prótese</option>
-                        <option value="Endodontia">Endodontia</option>
+<option value="Endodontia">Endodontia</option>
                         <option value="Cirurgia">Cirurgia</option>
                         <option value="Periodontia">Periodontia</option>
                         <option value="Outros">Outros</option>
@@ -1067,6 +87,8 @@ Posso te ajudar com mais informações? 📞</textarea>
             </div>
         </div>
     </div>
+
+    <script>
         // Configuração do Supabase
         const SUPABASE_URL = 'https://bjqfxroulfxyqhqopnns.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcWZ4cm91bGZ4eXFocW9wbm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNTkzODEsImV4cCI6MjA2ODgzNTM4MX0.7TRJhwzvbHK23rQP2T6azq6c2mVSDPBgfgwadpZxbjg';
@@ -1639,128 +661,6 @@ Posso te ajudar com mais informações? 📞</textarea>
                 case 'quarter':
                     startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
                     break;
-                default:
-                    return leadsArray;
-            }
-            
-            return leadsArray.filter(lead => new Date(lead.created_at) >= startDate);
-        }
-
-        function filterByPeriod(period) {
-            currentPeriodFilter = period;
-            
-            // Atualizar botões ativos
-            document.querySelectorAll('.period-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelector(`[data-period="${period}"]`).classList.add('active');
-            
-            filterLeads();
-            console.log('Filtro de período aplicado:', period);
-        }
-
-        function updateFilteredStats(filteredLeads) {
-            const total = filteredLeads.length;
-            const novos = filteredLeads.filter(lead => lead.status === 'novo').length;
-            const agendados = filteredLeads.filter(lead => lead.status === 'agendado').length;
-            const compareceu = filteredLeads.filter(lead => lead.status === 'compareceu').length;
-            const faltou = filteredLeads.filter(lead => lead.status === 'faltou').length;
-            
-            const leadsProcessados = filteredLeads.filter(lead => ['agendado', 'compareceu', 'faltou'].includes(lead.status)).length;
-            const taxaAgendamento = total > 0 ? Math.round((leadsProcessados / total) * 100) : 0;
-            
-            const totalConsultas = compareceu + faltou;
-            const taxaComparecimento = totalConsultas > 0 ? Math.round((compareceu / totalConsultas) * 100) : 0;
-            
-            let leadsPeriodo;
-            if (currentPeriodFilter === 'all') {
-                const currentMonth = new Date().getMonth();
-                const currentYear = new Date().getFullYear();
-                leadsPeriodo = leads.filter(lead => {
-                    const leadDate = new Date(lead.created_at);
-                    return leadDate.getMonth() === currentMonth && leadDate.getFullYear() === currentYear;
-                }).length;
-            } else {
-                leadsPeriodo = total;
-            }
-
-            document.getElementById('totalLeads').textContent = total;
-            document.getElementById('novosLeads').textContent = novos;
-            document.getElementById('agendadosLeads').textContent = agendados;
-            document.getElementById('compareceuLeads').textContent = compareceu;
-            document.getElementById('faltouLeads').textContent = faltou;
-            document.getElementById('taxaAgendamento').textContent = taxaAgendamento + '%';
-            document.getElementById('taxaComparecimento').textContent = taxaComparecimento + '%';
-            document.getElementById('leadsMes').textContent = leadsPeriodo;
-        }
-
-        function sendWhatsApp(phone, name, procedure) {
-            const message = userSettings.default_message
-                .replace('{nome}', name)
-                .replace('{clinica}', userSettings.clinic_name)
-                .replace('{procedimento}', procedure);
-            
-            const cleanPhone = phone.replace(/\D/g, '');
-            const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone;
-            const encodedMessage = encodeURIComponent(message);
-            const whatsappURL = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
-            
-            window.open(whatsappURL, '_blank');
-            
-            showAlert(`✅ WhatsApp aberto para ${name}!`, 'success');
-        }
-
-        function editLead(id) {
-            const lead = leads.find(l => l.id === id);
-            if (!lead) {
-                console.error('Lead não encontrado:', id);
-                return;
-            }
-            
-            currentEditId = id;
-            document.getElementById('modalTitle').textContent = 'Editar Lead';
-            document.getElementById('patientName').value = lead.name;
-            document.getElementById('phone').value = lead.phone;
-            document.getElementById('procedure').value = lead.procedure;
-            document.getElementById('status').value = lead.status;
-            document.getElementById('observations').value = lead.observations || '';
-            
-            document.getElementById('addLeadModal').style.display = 'block';
-            console.log('Modal de edição aberto para lead:', id);
-        }
-
-        // Funções de Relatórios
-        function showReportsModal() {
-            document.getElementById('reportsModal').style.display = 'block';
-        }
-
-        function generateReport(period) {
-            const reportContainer = document.getElementById('reportResults');
-            reportContainer.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-            
-            // Simular carregamento
-            setTimeout(() => {
-                const filteredLeads = filterLeadsByPeriod(leads, period);
-                displayReport(filteredLeads, period);
-            }, 800);
-        }
-
-        function filterLeadsByPeriod(leadsArray, period) {
-            if (period === 'all') return leadsArray;
-            
-            const now = new Date();
-            let startDate;
-            
-            switch(period) {
-                case 'week':
-                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    break;
-                case 'month':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                    break;
-                case 'quarter':
-                    startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-                    break;
                 case 'year':
                     startDate = new Date(now.getFullYear(), 0, 1);
                     break;
@@ -1922,6 +822,8 @@ Posso te ajudar com mais informações? 📞</textarea>
             };
             return periodMap[period] || period;
         }
+
+        // Funções de Configurações
         function showSettingsModal() {
             // Carregar valores atuais
             document.getElementById('clinicName').value = userSettings.clinic_name || '';
@@ -2076,6 +978,7 @@ Posso te ajudar com mais informações? 📞</textarea>
         window.saveSettings = saveSettings;
         window.showReportsModal = showReportsModal;
         window.generateReport = generateReport;
+        window.refreshSystem = refreshSystem;
         window.showLogin = showLogin;
         window.showRegister = showRegister;
         window.handleLogin = handleLogin;
@@ -2087,3 +990,1117 @@ Posso te ajudar com mais informações? 📞</textarea>
     </script>
 </body>
 </html>
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    break;
+                case 'quarter':
+                    startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+                    break;
+                default:
+                    return leadsArray;
+            }
+            
+            return leadsArray.filter(lead => new Date(lead.created_at) >= startDate);
+        }
+
+        function filterByPeriod(period) {
+            currentPeriodFilter = period;
+            
+            // Atualizar botões ativos
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-period="${period}"]`).classList.add('active');
+            
+            filterLeads();
+            console.log('Filtro de período aplicado:', period);
+        }
+
+        function updateFilteredStats(filteredLeads) {
+            const total = filteredLeads.length;
+            const novos = filteredLeads.filter(lead => lead.status === 'novo').length;
+            const agendados = filteredLeads.filter(lead => lead.status === 'agendado').length;
+            const compareceu = filteredLeads.filter(lead => lead.status === 'compareceu').length;
+            const faltou = filteredLeads.filter(lead => lead.status === 'faltou').length;
+            
+            const leadsProcessados = filteredLeads.filter(lead => ['agendado', 'compareceu', 'faltou'].includes(lead.status)).length;
+            const taxaAgendamento = total > 0 ? Math.round((leadsProcessados / total) * 100) : 0;
+            
+            const totalConsultas = compareceu + faltou;
+            const taxaComparecimento = totalConsultas > 0 ? Math.round((compareceu / totalConsultas) * 100) : 0;
+            
+            let leadsPeriodo;
+            if (currentPeriodFilter === 'all') {
+                const currentMonth = new Date().getMonth();
+                const currentYear = new Date().getFullYear();
+                leadsPeriodo = leads.filter(lead => {
+                    const leadDate = new Date(lead.created_at);
+                    return leadDate.getMonth() === currentMonth && leadDate.getFullYear() === currentYear;
+                }).length;
+            } else {
+                leadsPeriodo = total;
+            }
+
+            document.getElementById('totalLeads').textContent = total;
+            document.getElementById('novosLeads').textContent = novos;
+            document.getElementById('agendadosLeads').textContent = agendados;
+            document.getElementById('compareceuLeads').textContent = compareceu;
+            document.getElementById('faltouLeads').textContent = faltou;
+            document.getElementById('taxaAgendamento').textContent = taxaAgendamento + '%';
+            document.getElementById('taxaComparecimento').textContent = taxaComparecimento + '%';
+            document.getElementById('leadsMes').textContent = leadsPeriodo;
+        }
+
+        function sendWhatsApp(phone, name, procedure) {
+            const message = userSettings.default_message
+                .replace('{nome}', name)
+                .replace('{clinica}', userSettings.clinic_name)
+                .replace('{procedimento}', procedure);
+            
+            const cleanPhone = phone.replace(/\D/g, '');
+            const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone;
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappURL = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
+            
+            window.open(whatsappURL, '_blank');
+            
+            showAlert(`✅ WhatsApp aberto para ${name}!`, 'success');
+        }
+
+        function editLead(id) {
+            const lead = leads.find(l => l.id === id);
+            if (!lead) {
+                console.error('Lead não encontrado:', id);
+                return;
+            }
+            
+            currentEditId = id;
+            document.getElementById('modalTitle').textContent = 'Editar Lead';
+            document.getElementById('patientName').value = lead.name;
+            document.getElementById('phone').value = lead.phone;
+            document.getElementById('procedure').value = lead.procedure;
+            document.getElementById('status').value = lead.status;
+            document.getElementById('observations').value = lead.observations || '';
+            
+            document.getElementById('addLeadModal').style.display = 'block';
+            console.log('Modal de edição aberto para lead:', id);
+        }
+
+        // Funções de Relatórios
+        function showReportsModal() {
+            document.getElementById('reportsModal').style.display = 'block';
+        }
+
+        function generateReport(period) {
+            const reportContainer = document.getElementById('reportResults');
+            reportContainer.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            
+            // Simular carregamento
+            setTimeout(() => {
+                const filteredLeads = filterLeadsByPeriod(leads, period);
+                displayReport(filteredLeads, period);
+            }, 800);
+        }
+
+        function filterLeadsByPeriod(leadsArray, period) {
+            if (period === 'all') return leadsArray;
+            
+            const now = new Date();
+            let startDate;
+            
+            switch(period) {
+                case 'week':
+                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    break;
+                case 'month':<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flash Leads SaaS - Gestão de Leads Profissional</title>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Auth Screens */
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .auth-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .auth-card h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .auth-card p {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #2c3e50;
+            border: 2px solid #e9ecef;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .auth-switch {
+            margin-top: 20px;
+            color: #7f8c8d;
+        }
+
+        .auth-switch a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .auth-switch a:hover {
+            text-decoration: underline;
+        }
+
+        /* Main App Container */
+        .container {
+            display: none;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .controls-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            width: 250px;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .status-filter {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .status-filter select {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .period-filter {
+            margin-bottom: 15px;
+        }
+
+        .period-btn {
+            font-size: 14px;
+            padding: 8px 16px;
+            transition: all 0.3s ease;
+        }
+
+        .period-btn.active {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(39, 174, 96, 0.3);
+        }
+
+        .period-btn:not(.active):hover {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+        }
+
+        .table-container {
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        .leads-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .leads-table th {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .leads-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .leads-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-novo {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-agendado {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-compareceu {
+            background: #d1e7dd;
+            color: #0a3622;
+        }
+
+        .status-faltou {
+            background: #f8d7da;
+            color: #58151c;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 15px;
+        }
+
+        .modal-header h3 {
+            color: #2c3e50;
+            font-size: 1.5em;
+        }
+
+        .close {
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .no-leads {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .no-leads h3 {
+            margin-bottom: 10px;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Reports Modal Styles */
+        .reports-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .report-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            border-left: 4px solid #3498db;
+        }
+
+        .report-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .report-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .chart-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+
+        .chart-label {
+            min-width: 120px;
+            font-size: 14px;
+            color: #2c3e50;
+        }
+
+        .chart-progress {
+            flex: 1;
+            height: 20px;
+            background: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .chart-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        .chart-value {
+            min-width: 40px;
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .insights-container {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #27ae60;
+        }
+
+        .insights-container h4 {
+            color: #27ae60;
+            margin-bottom: 15px;
+        }
+
+        .insights-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .insights-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(39, 174, 96, 0.1);
+            color: #2c3e50;
+        }
+
+        .insights-list li:before {
+            content: "💡 ";
+            margin-right: 8px;
+        }
+
+        /* Responsividade */
+        @media (max-width: 1024px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .stats {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 12px;
+            }
+            
+            .search-input {
+                width: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .header {
+                padding: 20px;
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .header p {
+                font-size: 1em;
+            }
+
+            .controls {
+                padding: 20px;
+            }
+
+            .controls-top {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+
+            .search-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            .status-filter {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .stat-card {
+                padding: 15px;
+            }
+
+            .stat-number {
+                font-size: 1.5em;
+            }
+
+            .table-container {
+                padding: 15px;
+                overflow-x: auto;
+            }
+
+            .leads-table {
+                font-size: 14px;
+                min-width: 700px;
+            }
+
+            .leads-table th,
+            .leads-table td {
+                padding: 12px 8px;
+            }
+
+            .actions {
+                flex-direction: column;
+                gap: 4px;
+                min-width: 60px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+                padding: 20px;
+            }
+
+            .btn {
+                padding: 14px 20px;
+                font-size: 16px;
+            }
+
+            .period-filter {
+                text-align: center;
+            }
+
+            .period-filter > div {
+                justify-content: center;
+            }
+
+            .reports-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .chart-label {
+                min-width: 80px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.5em;
+            }
+
+            .header {
+                padding: 15px;
+            }
+
+            .controls {
+                padding: 15px;
+            }
+
+            .table-container {
+                padding: 10px;
+            }
+
+            .leads-table {
+                min-width: 600px;
+                font-size: 12px;
+            }
+
+            .btn {
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+
+            .reports-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Tablet Portrait */
+        @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+            .stats {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .controls-top {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            
+            .search-container {
+                flex: 1;
+                min-width: 300px;
+            }
+        }
+
+        /* Tablet Landscape */
+        @media (min-width: 1024px) and (max-width: 1200px) and (orientation: landscape) {
+            .stats {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .header {
+                flex-direction: row;
+            }
+        }
+
+        /* Alert Messages */
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication Screen -->
+    <div id="authScreen" class="auth-container">
+        <div class="auth-card">
+            <h1>⚡ Flash Leads</h1>
+            <p>Sistema Profissional de Gestão de Leads</p>
+            
+            <!-- Login Form -->
+            <div id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" placeholder="seu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Senha</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required>
+                </div>
+                <button class="btn btn-primary" onclick="handleLogin()" style="width: 100%; margin-bottom: 15px;">
+                    Entrar
+                </button>
+                <button class="btn btn-secondary" onclick="loginWithGoogle()" style="width: 100%; margin-bottom: 15px;">
+                    🔍 Entrar com Google
+                </button>
+                <div class="auth-switch">
+                    Não tem conta? <a href="#" onclick="showRegister()">Criar conta</a>
+                </div>
+            </div>
+
+            <!-- Register Form -->
+            <div id="registerForm" style="display: none;">
+                <div class="form-group">
+                    <label for="registerName">Nome Completo</label>
+                    <input type="text" id="registerName" placeholder="Seu nome" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" placeholder="seu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Senha</label>
+                    <input type="password" id="registerPassword" placeholder="••••••••" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerClinic">Nome da Clínica</label>
+                    <input type="text" id="registerClinic" placeholder="Sua clínica" required>
+                </div>
+                <button class="btn btn-primary" onclick="handleRegister()" style="width: 100%; margin-bottom: 15px;">
+                    Criar Conta
+                </button>
+                <div class="auth-switch">
+                    Já tem conta? <a href="#" onclick="showLogin()">Fazer login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="mainApp" class="container">
+        <div class="header">
+            <div class="header-left">
+                <div>
+                    <h1>⚡ Flash Leads</h1>
+                    <p>Sistema Inteligente de Gestão de Leads Odontológicos</p>
+                </div>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">U</div>
+                <span id="userName">Usuário</span>
+                <button class="btn btn-secondary" onclick="logout()" style="margin-left: 15px; padding: 8px 16px; width: auto;">
+                    Sair
+                </button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalLeads">0</div>
+                    <div class="stat-label">Total de Leads</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="novosLeads">0</div>
+                    <div class="stat-label">Leads Novos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="agendadosLeads">0</div>
+                    <div class="stat-label">Agendados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="compareceuLeads">0</div>
+                    <div class="stat-label">Compareceram</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="faltouLeads">0</div>
+                    <div class="stat-label">Faltaram</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="leadsMes">0</div>
+                    <div class="stat-label">Leads Este Mês</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="taxaAgendamento">0%</div>
+                    <div class="stat-label">Taxa de Agendamento</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="taxaComparecimento">0%</div>
+                    <div class="stat-label">Taxa de Comparecimento</div>
+                </div>
+            </div>
+
+            <div class="controls-top">
+                <div class="search-container">
+                    <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar por nome ou telefone...">
+                    <div class="status-filter">
+                        <label>Filtrar por status:</label>
+                        <select id="statusFilter">
+                            <option value="">Todos os status</option>
+                            <option value="novo">Novo</option>
+                            <option value="agendado">Agendado</option>
+                            <option value="compareceu">Compareceu</option>
+                            <option value="faltou">Faltou</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="period-filter">
+                    <label><strong>Filtrar por período:</strong></label>
+                    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center;">
+                        <button class="btn btn-info period-btn active" data-period="all" onclick="filterByPeriod('all')">
+                            Todos
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="today" onclick="filterByPeriod('today')">
+                            Hoje
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="week" onclick="filterByPeriod('week')">
+                            Esta Semana
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="month" onclick="filterByPeriod('month')">
+                            Este Mês
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="quarter" onclick="filterByPeriod('quarter')">
+                            Trimestre
+                        </button>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="openAddLeadModal()">
+                        ➕ Adicionar Novo Lead
+                    </button>
+                    <button class="btn btn-info" onclick="showSettingsModal()">
+                        ⚙️ Configurações
+                    </button>
+                    <button class="btn btn-warning" onclick="showReportsModal()">
+                        📊 Relatórios
+                    </button>
+                    <button class="btn btn-success" onclick="refreshSystem()">
+                        🔄 Atualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="leads-table">
+                <thead>
+                    <tr>
+                        <th>Nome do Paciente</th>
+                        <th>Telefone</th>
+                        <th>Procedimento</th>
+                        <th>Data de Entrada</th>
+                        <th>Status</th>
+                        <th>Observações</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="leadsTableBody">
+                    <tr class="no-leads">
+                        <td colspan="7">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Lead Modal -->
+    <div id="addLeadModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Adicionar Novo Lead</h3>
+                <span class="close" onclick="closeModal('addLeadModal')">&times;</span>
+            </div>
+            <form id="leadForm">
+                <div class="form-group">
+                    <label for="patientName">Nome do Paciente *</label>
+                    <input type="text" id="patientName" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Telefone *</label>
+                    <input type="tel" id="phone" required>
+                </div>
+                <div class="form-group">
+                    <label for="procedure">Procedimento Desejado *</label>
+                    <select id="procedure" required>
+                        <option value="">Selecione o procedimento</option>
+                        <option value="Limpeza/Profilaxia">Limpeza/Profilaxia</option>
+                        <option value="Clareamento">Clareamento</option>
+                        <option value="Implante">Implante</option>
+                        <option value="Ortodontia">Ortodontia</option>
+                        <option value="Prótese">Prótese</option>
+                        <option value="En
