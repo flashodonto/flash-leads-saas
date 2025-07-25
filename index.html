@@ -221,6 +221,7 @@
             border-radius: 20px;
             font-size: 12px;
             font-weight: bold;
+            display: none; /* Ocultar sistema de planos */
         }
 
         .controls {
@@ -731,7 +732,6 @@
                 </div>
             </div>
             <div class="user-info">
-                <div class="subscription-badge" id="userPlan">GRATUITO</div>
                 <div class="user-avatar" id="userAvatar">U</div>
                 <span id="userName">Usuário</span>
                 <button class="btn btn-secondary" onclick="logout()" style="margin-left: 15px; padding: 8px 16px; width: auto;">
@@ -818,9 +818,6 @@
                     </button>
                     <button class="btn btn-info" onclick="showSettingsModal()">
                         ⚙️ Configurações
-                    </button>
-                    <button class="btn btn-warning" onclick="showSubscriptionModal()">
-                        💎 Planos
                     </button>
                     <button class="btn btn-success" onclick="refreshSystem()">
                         🔄 Atualizar
@@ -944,65 +941,14 @@ Posso te ajudar com mais informações? 📞</textarea>
     </div>
 
     <!-- Subscription Modal -->
-    <div id="subscriptionModal" class="modal">
-        <div class="modal-content" style="max-width: 800px;">
-            <div class="modal-header">
-                <h3>💎 Planos e Assinaturas</h3>
-                <span class="close" onclick="closeModal('subscriptionModal')">&times;</span>
-            </div>
-            
-            <div class="plans-grid">
-                <div class="plan-card">
-                    <div class="plan-name">Gratuito</div>
-                    <div class="plan-price">R$ 0<small>/mês</small></div>
-                    <ul class="plan-features">
-                        <li>Até 50 leads</li>
-                        <li>WhatsApp básico</li>
-                        <li>Relatórios simples</li>
-                        <li>Suporte por email</li>
-                    </ul>
-                    <button class="btn btn-secondary" disabled style="width: 100%;">
-                        Plano Atual
-                    </button>
-                </div>
-
-                <div class="plan-card featured">
-                    <div class="plan-name">Profissional</div>
-                    <div class="plan-price">R$ 29<small>/mês</small></div>
-                    <ul class="plan-features">
-                        <li>Leads ilimitados</li>
-                        <li>WhatsApp + Google Agenda</li>
-                        <li>Relatórios avançados</li>
-                        <li>Lembretes automáticos</li>
-                        <li>Suporte prioritário</li>
-                    </ul>
-                    <button class="btn btn-primary" onclick="upgradePlan('pro')" style="width: 100%;">
-                        Assinar Agora
-                    </button>
-                </div>
-
-                <div class="plan-card">
-                    <div class="plan-name">Enterprise</div>
-                    <div class="plan-price">R$ 59<small>/mês</small></div>
-                    <ul class="plan-features">
-                        <li>Tudo do Profissional</li>
-                        <li>Multi-usuários</li>
-                        <li>API personalizada</li>
-                        <li>White label</li>
-                        <li>Suporte dedicado</li>
-                    </ul>
-                    <button class="btn btn-primary" onclick="upgradePlan('enterprise')" style="width: 100%;">
-                        Falar com Vendas
-                    </button>
-                </div>
-            </div>
-        </div>
+    <div id="subscriptionModal" class="modal" style="display: none;">
+        <!-- Modal removido - sistema de planos desabilitado -->
     </div>
 
     <script>
         // Configuração do Supabase
-        const SUPABASE_URL = 'https://bjqfxroulfxyqhqopnns.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcWZ4cm91bGZ4eXFocW9wbm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNTkzODEsImV4cCI6MjA2ODgzNTM4MX0.7TRJhwzvbHK23rQP2T6azq6c2mVSDPBgfgwadpZxbjg';
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // SUBSTITUA pela sua URL
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // SUBSTITUA pela sua chave
         
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
@@ -1705,18 +1651,14 @@ Posso te ajudar com mais informações? 📞</textarea>
         }
 
         function showSubscriptionModal() {
-            document.getElementById('subscriptionModal').style.display = 'block';
+            // Sistema de planos removido
+            showAlert('Sistema focado em gestão de leads! 🚀', 'info');
         }
 
         // Funções de Assinatura
         function upgradePlan(planType) {
-            if (planType === 'pro') {
-                showAlert('Redirecionando para o pagamento...', 'info');
-                // Aqui você integraria com o Stripe
-                // window.location.href = 'checkout_url_stripe';
-            } else if (planType === 'enterprise') {
-                showAlert('Entre em contato: contato@flashleads.com', 'info');
-            }
+            // Sistema de planos removido
+            showAlert('Funcionalidade de planos removida - foco total nos leads! 💪', 'info');
         }
 
         // Funções Auxiliares
