@@ -1,34 +1,930 @@
--- =============================================
--- FLASH LEADS SAAS - SCHEMA OTIMIZADO
--- Execute este script completo no Supabase SQL Editor
--- =============================================
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flash Leads SaaS - Gestão de Leads Profissional</title>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Stripe -->
+    <script src="https://js.stripe.com/v3/"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
--- PARTE 1: LIMPEZA (caso existam tabelas antigas)
--- =============================================
-DROP POLICY IF EXISTS "Users can view own leads" ON leads;
-DROP POLICY IF EXISTS "Users can insert own leads" ON leads;
-DROP POLICY IF EXISTS "Users can update own leads" ON leads;
-DROP POLICY IF EXISTS "Users can delete own leads" ON leads;
-DROP POLICY IF EXISTS "Users can view own settings" ON user_settings;
-DROP POLICY IF EXISTS "Users can insert own settings" ON user_settings;
-DROP POLICY IF EXISTS "Users can update own settings" ON user_settings;
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
 
-DROP TABLE IF EXISTS activity_logs CASCADE;
-DROP TABLE IF EXISTS subscriptions CASCADE;
-DROP TABLE IF EXISTS procedure_templates CASCADE;
-DROP TABLE IF EXISTS leads CASCADE;
-DROP TABLE IF EXISTS user_settings CASCADE;
+        /* Auth Screens */
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
 
--- PARTE 2: CRIAÇÃO DAS TABELAS PRINCIPAIS
--- =============================================
+        .auth-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
 
--- 1. Tabela de Configurações do Usuário
-CREATE TABLE user_settings (
-  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
-  clinic_name TEXT DEFAULT 'Minha Clínica',
-  whatsapp TEXT,
-  default_message TEXT DEFAULT 'Olá {nome}! 😊
+        .auth-card h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .auth-card p {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #2c3e50;
+            border: 2px solid #e9ecef;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .auth-switch {
+            margin-top: 20px;
+            color: #7f8c8d;
+        }
+
+        .auth-switch a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .auth-switch a:hover {
+            text-decoration: underline;
+        }
+
+        /* Main App Container */
+        .container {
+            display: none;
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .subscription-badge {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .controls-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            width: 250px;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .status-filter {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .status-filter select {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .period-filter {
+            margin-bottom: 15px;
+        }
+
+        .period-btn {
+            font-size: 14px;
+            padding: 8px 16px;
+            transition: all 0.3s ease;
+        }
+
+        .period-btn.active {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(39, 174, 96, 0.3);
+        }
+
+        .period-btn:not(.active):hover {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+        }
+
+        .table-container {
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        .leads-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .leads-table th {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .leads-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .leads-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-novo {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-agendado {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-compareceu {
+            background: #d1e7dd;
+            color: #0a3622;
+        }
+
+        .status-faltou {
+            background: #f8d7da;
+            color: #58151c;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 15px;
+        }
+
+        .modal-header h3 {
+            color: #2c3e50;
+            font-size: 1.5em;
+        }
+
+        .close {
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .no-leads {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .no-leads h3 {
+            margin-bottom: 10px;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Subscription Plans */
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .plan-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .plan-card.featured {
+            border-color: #3498db;
+            transform: scale(1.05);
+        }
+
+        .plan-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .plan-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .plan-price {
+            font-size: 3em;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 5px;
+        }
+
+        .plan-price small {
+            font-size: 0.3em;
+            color: #7f8c8d;
+        }
+
+        .plan-features {
+            list-style: none;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .plan-features li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .plan-features li:before {
+            content: "✅ ";
+            margin-right: 10px;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+
+            .header {
+                padding: 20px;
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .controls {
+                padding: 20px;
+            }
+
+            .controls-top {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+
+            .search-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            .status-filter {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .table-container {
+                padding: 15px;
+                overflow-x: auto;
+            }
+
+            .leads-table {
+                font-size: 14px;
+                min-width: 800px;
+            }
+
+            .leads-table th,
+            .leads-table td {
+                padding: 12px 8px;
+            }
+
+            .actions {
+                flex-direction: column;
+                gap: 4px;
+                min-width: 60px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+                padding: 20px;
+            }
+
+            .btn {
+                padding: 14px 20px;
+                font-size: 16px;
+            }
+
+            .plans-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .plan-card.featured {
+                transform: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.5em;
+            }
+        }
+
+        /* Alert Messages */
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: none;
+        }
+
+        .content-area {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication Screen -->
+    <div id="authScreen" class="auth-container">
+        <div class="auth-card">
+            <h1>⚡ Flash Leads</h1>
+            <p>Sistema Profissional de Gestão de Leads</p>
+            
+            <!-- Login Form -->
+            <div id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" placeholder="seu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Senha</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required>
+                </div>
+                <button class="btn btn-primary" onclick="handleLogin()" style="width: 100%; margin-bottom: 15px;">
+                    Entrar
+                </button>
+                <button class="btn btn-secondary" onclick="loginWithGoogle()" style="width: 100%; margin-bottom: 15px;">
+                    🔍 Entrar com Google
+                </button>
+                <div class="auth-switch">
+                    Não tem conta? <a href="#" onclick="showRegister()">Criar conta</a>
+                </div>
+            </div>
+
+            <!-- Register Form -->
+            <div id="registerForm" style="display: none;">
+                <div class="form-group">
+                    <label for="registerName">Nome Completo</label>
+                    <input type="text" id="registerName" placeholder="Seu nome" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" placeholder="seu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Senha</label>
+                    <input type="password" id="registerPassword" placeholder="••••••••" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerClinic">Nome da Clínica</label>
+                    <input type="text" id="registerClinic" placeholder="Sua clínica" required>
+                </div>
+                <button class="btn btn-primary" onclick="handleRegister()" style="width: 100%; margin-bottom: 15px;">
+                    Criar Conta
+                </button>
+                <div class="auth-switch">
+                    Já tem conta? <a href="#" onclick="showLogin()">Fazer login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="mainApp" class="container">
+        <div class="header">
+            <div class="header-left">
+                <div>
+                    <h1>⚡ Flash Leads</h1>
+                    <p>Sistema Inteligente de Gestão de Leads Odontológicos</p>
+                </div>
+            </div>
+            <div class="user-info">
+                <div class="subscription-badge" id="userPlan">GRATUITO</div>
+                <div class="user-avatar" id="userAvatar">U</div>
+                <span id="userName">Usuário</span>
+                <button class="btn btn-secondary" onclick="logout()" style="margin-left: 15px; padding: 8px 16px; width: auto;">
+                    Sair
+                </button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalLeads">0</div>
+                    <div class="stat-label">Total de Leads</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="novosLeads">0</div>
+                    <div class="stat-label">Leads Novos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="agendadosLeads">0</div>
+                    <div class="stat-label">Agendados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="compareceuLeads">0</div>
+                    <div class="stat-label">Compareceram</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="faltouLeads">0</div>
+                    <div class="stat-label">Faltaram</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="leadsMes">0</div>
+                    <div class="stat-label">Leads Este Mês</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="taxaAgendamento">0%</div>
+                    <div class="stat-label">Taxa de Agendamento</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="taxaComparecimento">0%</div>
+                    <div class="stat-label">Taxa de Comparecimento</div>
+                </div>
+            </div>
+
+            <div class="controls-top">
+                <div class="search-container">
+                    <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar por nome ou telefone...">
+                    <div class="status-filter">
+                        <label>Filtrar por status:</label>
+                        <select id="statusFilter">
+                            <option value="">Todos os status</option>
+                            <option value="novo">Novo</option>
+                            <option value="agendado">Agendado</option>
+                            <option value="compareceu">Compareceu</option>
+                            <option value="faltou">Faltou</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="period-filter">
+                    <label><strong>Filtrar por período:</strong></label>
+                    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center;">
+                        <button class="btn btn-info period-btn active" data-period="all" onclick="filterByPeriod('all')">
+                            Todos
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="today" onclick="filterByPeriod('today')">
+                            Hoje
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="week" onclick="filterByPeriod('week')">
+                            Esta Semana
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="month" onclick="filterByPeriod('month')">
+                            Este Mês
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="quarter" onclick="filterByPeriod('quarter')">
+                            Trimestre
+                        </button>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="openAddLeadModal()">
+                        ➕ Adicionar Novo Lead
+                    </button>
+                    <button class="btn btn-info" onclick="showSettingsModal()">
+                        ⚙️ Configurações
+                    </button>
+                    <button class="btn btn-warning" onclick="showSubscriptionModal()">
+                        💎 Planos
+                    </button>
+                    <button class="btn btn-success" onclick="refreshSystem()">
+                        🔄 Atualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="leads-table">
+                <thead>
+                    <tr>
+                        <th>Nome do Paciente</th>
+                        <th>Telefone</th>
+                        <th>Procedimento</th>
+                        <th>Data de Entrada</th>
+                        <th>Status</th>
+                        <th>Observações</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="leadsTableBody">
+                    <tr class="no-leads">
+                        <td colspan="7">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Lead Modal -->
+    <div id="addLeadModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Adicionar Novo Lead</h3>
+                <span class="close" onclick="closeModal('addLeadModal')">&times;</span>
+            </div>
+            <form id="leadForm">
+                <div class="form-group">
+                    <label for="patientName">Nome do Paciente *</label>
+                    <input type="text" id="patientName" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Telefone *</label>
+                    <input type="tel" id="phone" required>
+                </div>
+                <div class="form-group">
+                    <label for="procedure">Procedimento Desejado *</label>
+                    <select id="procedure" required>
+                        <option value="">Selecione o procedimento</option>
+                        <option value="Limpeza/Profilaxia">Limpeza/Profilaxia</option>
+                        <option value="Clareamento">Clareamento</option>
+                        <option value="Implante">Implante</option>
+                        <option value="Ortodontia">Ortodontia</option>
+                        <option value="Prótese">Prótese</option>
+                        <option value="Endodontia">Endodontia</option>
+                        <option value="Cirurgia">Cirurgia</option>
+                        <option value="Periodontia">Periodontia</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="status">Status do Lead</label>
+                    <select id="status">
+                        <option value="novo">Novo</option>
+                        <option value="agendado">Agendado</option>
+                        <option value="compareceu">Compareceu</option>
+                        <option value="faltou">Faltou</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="observations">Observações</label>
+                    <textarea id="observations" placeholder="Observações adicionais sobre o lead..."></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary" style="width: 100%">💾 Salvar Lead</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ Configurações da Clínica</h3>
+                <span class="close" onclick="closeModal('settingsModal')">&times;</span>
+            </div>
+            <div class="form-group">
+                <label><strong>Nome da Clínica:</strong></label>
+                <input type="text" id="clinicName" placeholder="Nome da sua clínica">
+            </div>
+            <div class="form-group">
+                <label><strong>WhatsApp da Clínica (opcional):</strong></label>
+                <input type="tel" id="clinicWhatsapp" placeholder="(11) 99999-9999">
+                <small style="color: #666; font-size: 12px;">Para receber mensagens dos leads (opcional)</small>
+            </div>
+            <div class="form-group">
+                <label><strong>Mensagem Padrão:</strong></label>
+                <textarea id="defaultMessage" style="height: 120px;">Olá {nome}! 😊
 
 Tudo bem? Aqui é da {clinica} 🦷
 
@@ -36,332 +932,915 @@ Vi que você tem interesse em {procedimento}. Que tal agendar uma consulta?
 
 Temos horários disponíveis esta semana e condições especiais para você!
 
-Posso te ajudar com mais informações? 📞',
-  auto_reminders BOOLEAN DEFAULT FALSE,
-  reminder_days INTEGER DEFAULT 2,
-  subscription_plan TEXT DEFAULT 'free',
-  subscription_status TEXT DEFAULT 'active',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+Posso te ajudar com mais informações? 📞</textarea>
+                <small style="color: #666; font-size: 12px;">Use: {nome}, {clinica}, {procedimento} para personalizar</small>
+            </div>
+            <div class="form-group">
+                <button onclick="saveSettings()" class="btn btn-primary" style="width: 100%;">
+                    💾 Salvar Configurações
+                </button>
+            </div>
+        </div>
+    </div>
 
--- 2. Tabela de Leads
-CREATE TABLE leads (
-  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  phone TEXT NOT NULL,
-  procedure TEXT NOT NULL,
-  status TEXT DEFAULT 'novo' CHECK (status IN ('novo', 'agendado', 'compareceu', 'faltou')),
-  observations TEXT,
-  appointment_date DATE,
-  appointment_time TIME,
-  appointment_duration INTEGER DEFAULT 60,
-  appointment_location TEXT,
-  attendance_date DATE,
-  attendance_time TIME,
-  last_contact TIMESTAMP WITH TIME ZONE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+    <!-- Subscription Modal -->
+    <div id="subscriptionModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3>💎 Planos e Assinaturas</h3>
+                <span class="close" onclick="closeModal('subscriptionModal')">&times;</span>
+            </div>
+            
+            <div class="plans-grid">
+                <div class="plan-card">
+                    <div class="plan-name">Gratuito</div>
+                    <div class="plan-price">R$ 0<small>/mês</small></div>
+                    <ul class="plan-features">
+                        <li>Até 50 leads</li>
+                        <li>WhatsApp básico</li>
+                        <li>Relatórios simples</li>
+                        <li>Suporte por email</li>
+                    </ul>
+                    <button class="btn btn-secondary" disabled style="width: 100%;">
+                        Plano Atual
+                    </button>
+                </div>
 
--- 3. Tabela de Assinaturas (para controle de planos)
-CREATE TABLE subscriptions (
-  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
-  stripe_customer_id TEXT,
-  stripe_subscription_id TEXT,
-  plan_type TEXT DEFAULT 'free' CHECK (plan_type IN ('free', 'pro', 'enterprise')),
-  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'canceled')),
-  current_period_start TIMESTAMP WITH TIME ZONE,
-  current_period_end TIMESTAMP WITH TIME ZONE,
-  cancel_at_period_end BOOLEAN DEFAULT FALSE,
-  leads_limit INTEGER DEFAULT 50,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+                <div class="plan-card featured">
+                    <div class="plan-name">Profissional</div>
+                    <div class="plan-price">R$ 29<small>/mês</small></div>
+                    <ul class="plan-features">
+                        <li>Leads ilimitados</li>
+                        <li>WhatsApp + Google Agenda</li>
+                        <li>Relatórios avançados</li>
+                        <li>Lembretes automáticos</li>
+                        <li>Suporte prioritário</li>
+                    </ul>
+                    <button class="btn btn-primary" onclick="upgradePlan('pro')" style="width: 100%;">
+                        Assinar Agora
+                    </button>
+                </div>
 
--- PARTE 3: POLÍTICAS DE SEGURANÇA (RLS)
--- =============================================
+                <div class="plan-card">
+                    <div class="plan-name">Enterprise</div>
+                    <div class="plan-price">R$ 59<small>/mês</small></div>
+                    <ul class="plan-features">
+                        <li>Tudo do Profissional</li>
+                        <li>Multi-usuários</li>
+                        <li>API personalizada</li>
+                        <li>White label</li>
+                        <li>Suporte dedicado</li>
+                    </ul>
+                    <button class="btn btn-primary" onclick="upgradePlan('enterprise')" style="width: 100%;">
+                        Falar com Vendas
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
--- Habilitar Row Level Security
-ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+    <script>
+        // Configuração do Supabase
+        const SUPABASE_URL = 'https://bjqfxroulfxyqhqopnns.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcWZ4cm91bGZ4eXFocW9wbm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNTkzODEsImV4cCI6MjA2ODgzNTM4MX0.7TRJhwzvbHK23rQP2T6azq6c2mVSDPBgfgwadpZxbjg';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Estado da aplicação
+        let currentUser = null;
+        let currentEditId = null;
+        let currentPeriodFilter = 'all';
+        let leads = [];
+        let userSettings = {
+            clinic_name: 'Minha Clínica',
+            whatsapp: '',
+            default_message: 'Olá {nome}! 😊\n\nTudo bem? Aqui é da {clinica} 🦷\n\nVi que você tem interesse em {procedimento}. Que tal agendar uma consulta?\n\nTemos horários disponíveis esta semana e condições especiais para você!\n\nPosso te ajudar com mais informações? 📞',
+            auto_reminders: false,
+            reminder_days: 2
+        };
 
--- Políticas para user_settings
-CREATE POLICY "Users can view own settings" ON user_settings
-  FOR SELECT USING (auth.uid() = user_id);
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 Flash Leads SaaS iniciando...');
+            
+            // Verificar se usuário está logado
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+                currentUser = session.user;
+                showMainApp();
+            } else {
+                showAuthScreen();
+            }
+            
+            // Listener para mudanças de autenticação
+            supabase.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_IN') {
+                    currentUser = session.user;
+                    showMainApp();
+                } else if (event === 'SIGNED_OUT') {
+                    currentUser = null;
+                    showAuthScreen();
+                }
+            });
+        });
 
-CREATE POLICY "Users can insert own settings" ON user_settings
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+        // Funções de Autenticação
+        function showLogin() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+        }
 
-CREATE POLICY "Users can update own settings" ON user_settings
-  FOR UPDATE USING (auth.uid() = user_id);
+        function showRegister() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+        }
 
-CREATE POLICY "Users can delete own settings" ON user_settings
-  FOR DELETE USING (auth.uid() = user_id);
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showAlert('Por favor, preencha todos os campos!', 'error');
+                return;
+            }
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) throw error;
+                
+                showAlert('Login realizado com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('Erro no login:', error);
+                showAlert('Erro no login: ' + error.message, 'error');
+            }
+        }
 
--- Políticas para leads
-CREATE POLICY "Users can view own leads" ON leads
-  FOR SELECT USING (auth.uid() = user_id);
+        async function handleRegister() {
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const clinic = document.getElementById('registerClinic').value;
+            
+            if (!name || !email || !password || !clinic) {
+                showAlert('Por favor, preencha todos os campos!', 'error');
+                return;
+            }
+            
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            full_name: name,
+                            clinic_name: clinic
+                        }
+                    }
+                });
+                
+                if (error) throw error;
+                
+                showAlert('Conta criada com sucesso! Verifique seu email.', 'success');
+                showLogin();
+                
+            } catch (error) {
+                console.error('Erro no registro:', error);
+                showAlert('Erro ao criar conta: ' + error.message, 'error');
+            }
+        }
 
-CREATE POLICY "Users can insert own leads" ON leads
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+        async function loginWithGoogle() {
+            try {
+                const { data, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.origin
+                    }
+                });
+                
+                if (error) throw error;
+                
+            } catch (error) {
+                console.error('Erro no login com Google:', error);
+                showAlert('Erro no login com Google: ' + error.message, 'error');
+            }
+        }
 
-CREATE POLICY "Users can update own leads" ON leads
-  FOR UPDATE USING (auth.uid() = user_id);
+        async function logout() {
+            try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                
+                showAlert('Logout realizado com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('Erro no logout:', error);
+                showAlert('Erro no logout: ' + error.message, 'error');
+            }
+        }
 
-CREATE POLICY "Users can delete own leads" ON leads
-  FOR DELETE USING (auth.uid() = user_id);
+        // Funções de Interface
+        function showAuthScreen() {
+            document.getElementById('authScreen').style.display = 'flex';
+            document.getElementById('mainApp').style.display = 'none';
+        }
 
--- Políticas para subscriptions
-CREATE POLICY "Users can view own subscriptions" ON subscriptions
-  FOR SELECT USING (auth.uid() = user_id);
+        async function showMainApp() {
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            
+            // Configurar informações do usuário
+            setupUserInfo();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Carregar dados
+            await loadUserData();
+            await loadLeads();
+            updateStats();
+            renderLeads();
+        }
 
-CREATE POLICY "Users can insert own subscriptions" ON subscriptions
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+        function setupUserInfo() {
+            const userName = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
+            const userAvatar = userName.charAt(0).toUpperCase();
+            
+            document.getElementById('userName').textContent = userName;
+            document.getElementById('userAvatar').textContent = userAvatar;
+        }
 
-CREATE POLICY "Users can update own subscriptions" ON subscriptions
-  FOR UPDATE USING (auth.uid() = user_id);
+        function setupEventListeners() {
+            // Busca e filtros
+            document.getElementById('searchInput').addEventListener('input', filterLeads);
+            document.getElementById('statusFilter').addEventListener('change', filterLeads);
+            
+            // Modal form
+            document.getElementById('leadForm').addEventListener('submit', handleFormSubmit);
+            
+            // Fechar modal clicando fora
+            window.addEventListener('click', function(event) {
+                if (event.target.classList.contains('modal')) {
+                    event.target.style.display = 'none';
+                }
+            });
+            
+            console.log('Event listeners configurados');
+        }
 
--- PARTE 4: ÍNDICES PARA PERFORMANCE
--- =============================================
+        // Funções de Dados
+        async function loadUserData() {
+            try {
+                // Carregar configurações do usuário
+                const { data: settings, error } = await supabase
+                    .from('user_settings')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .single();
+                
+                if (settings) {
+                    userSettings = settings;
+                } else {
+                    // Criar configurações padrão
+                    await createDefaultSettings();
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar dados do usuário:', error);
+            }
+        }
 
--- Índices para leads
-CREATE INDEX IF NOT EXISTS idx_leads_user_id ON leads(user_id);
-CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
-CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_leads_user_status ON leads(user_id, status);
-CREATE INDEX IF NOT EXISTS idx_leads_appointment_date ON leads(appointment_date);
+        async function createDefaultSettings() {
+            const defaultSettings = {
+                user_id: currentUser.id,
+                clinic_name: currentUser.user_metadata?.clinic_name || 'Minha Clínica',
+                whatsapp: '',
+                default_message: 'Olá {nome}! 😊\n\nTudo bem? Aqui é da {clinica} 🦷\n\nVi que você tem interesse em {procedimento}. Que tal agendar uma consulta?\n\nTemos horários disponíveis esta semana e condições especiais para você!\n\nPosso te ajudar com mais informações? 📞',
+                auto_reminders: false,
+                reminder_days: 2
+            };
+            
+            try {
+                const { data, error } = await supabase
+                    .from('user_settings')
+                    .insert([defaultSettings])
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                userSettings = data;
+                
+            } catch (error) {
+                console.error('Erro ao criar configurações padrão:', error);
+            }
+        }
 
--- Índices para user_settings
-CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
+        async function loadLeads() {
+            try {
+                const { data, error } = await supabase
+                    .from('leads')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                leads = data || [];
+                console.log('Leads carregados:', leads.length);
+                
+            } catch (error) {
+                console.error('Erro ao carregar leads:', error);
+                leads = [];
+            }
+        }
 
--- Índices para subscriptions
-CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            console.log('Formulário submetido');
+            
+            const formData = {
+                name: document.getElementById('patientName').value,
+                phone: document.getElementById('phone').value,
+                procedure: document.getElementById('procedure').value,
+                status: document.getElementById('status').value,
+                observations: document.getElementById('observations').value
+            };
+            
+            if (currentEditId) {
+                updateLead(currentEditId, formData);
+            } else {
+                addLead(formData);
+            }
+        }
 
--- PARTE 5: TRIGGERS PARA ATUALIZAÇÃO AUTOMÁTICA
--- =============================================
+        async function addLead(formData = null) {
+            let leadData;
+            
+            if (formData) {
+                leadData = formData;
+            } else {
+                const name = document.getElementById('patientName').value;
+                const phone = document.getElementById('phone').value;
+                const procedure = document.getElementById('procedure').value;
+                const status = document.getElementById('status').value || 'novo';
+                const observations = document.getElementById('observations').value;
+                
+                if (!name || !phone || !procedure) {
+                    showAlert('Por favor, preencha os campos obrigatórios!', 'error');
+                    return;
+                }
+                
+                leadData = { name, phone, procedure, status, observations };
+            }
+            
+            const newLead = {
+                user_id: currentUser.id,
+                name: leadData.name,
+                phone: leadData.phone,
+                procedure: leadData.procedure,
+                status: leadData.status || 'novo',
+                observations: leadData.observations || '',
+                created_at: new Date().toISOString()
+            };
+            
+            try {
+                const { data, error } = await supabase
+                    .from('leads')
+                    .insert([newLead])
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                
+                leads.unshift(data);
+                updateStats();
+                renderLeads();
+                closeModal('addLeadModal');
+                
+                // Limpar formulário
+                document.getElementById('leadForm').reset();
+                
+                showAlert('Lead adicionado com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('Erro ao adicionar lead:', error);
+                showAlert('Erro ao adicionar lead: ' + error.message, 'error');
+            }
+        }
 
--- Função para atualizar updated_at automaticamente
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+        async function updateLead(leadId, formData) {
+            try {
+                const { data, error } = await supabase
+                    .from('leads')
+                    .update({ 
+                        name: formData.name,
+                        phone: formData.phone,
+                        procedure: formData.procedure,
+                        status: formData.status,
+                        observations: formData.observations,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', leadId)
+                    .eq('user_id', currentUser.id)
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                
+                // Atualizar no array local
+                const index = leads.findIndex(lead => lead.id === leadId);
+                if (index !== -1) {
+                    leads[index] = data;
+                }
+                
+                updateStats();
+                renderLeads();
+                closeModal('addLeadModal');
+                
+                // Limpar formulário e reset
+                document.getElementById('leadForm').reset();
+                currentEditId = null;
+                document.getElementById('modalTitle').textContent = 'Adicionar Novo Lead';
+                
+                showAlert('Lead atualizado com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('Erro ao atualizar lead:', error);
+                showAlert('Erro ao atualizar lead: ' + error.message, 'error');
+            }
+        }
 
--- Triggers para atualizar updated_at
-DROP TRIGGER IF EXISTS update_user_settings_updated_at ON user_settings;
-CREATE TRIGGER update_user_settings_updated_at 
-  BEFORE UPDATE ON user_settings
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        async function updateLeadStatus(leadId, newStatus) {
+            try {
+                const { data, error } = await supabase
+                    .from('leads')
+                    .update({ 
+                        status: newStatus,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', leadId)
+                    .eq('user_id', currentUser.id)
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                
+                // Atualizar no array local
+                const index = leads.findIndex(lead => lead.id === leadId);
+                if (index !== -1) {
+                    leads[index] = data;
+                }
+                
+                updateStats();
+                renderLeads();
+                showAlert('Status atualizado com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('Erro ao atualizar status:', error);
+                showAlert('Erro ao atualizar status: ' + error.message, 'error');
+            }
+        }
 
-DROP TRIGGER IF EXISTS update_leads_updated_at ON leads;
-CREATE TRIGGER update_leads_updated_at 
-  BEFORE UPDATE ON leads
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        async function deleteLead(leadId) {
+            const lead = leads.find(l => l.id === leadId);
+            if (!lead) return;
+            
+            if (!confirm(`Tem certeza que deseja excluir o lead de ${lead.name}?`)) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('leads')
+                    .delete()
+                    .eq('id', leadId)
+                    .eq('user_id', currentUser.id);
+                
+                if (error) throw error;
+                
+                leads = leads.filter(lead => lead.id !== leadId);
+                updateStats();
+                renderLeads();
+                showAlert('Lead excluído com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('Erro ao excluir lead:', error);
+                showAlert('Erro ao excluir lead: ' + error.message, 'error');
+            }
+        }
 
-DROP TRIGGER IF EXISTS update_subscriptions_updated_at ON subscriptions;
-CREATE TRIGGER update_subscriptions_updated_at 
-  BEFORE UPDATE ON subscriptions
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        // Funções de Interface de Dados
+        function updateStats() {
+            const total = leads.length;
+            const novos = leads.filter(lead => lead.status === 'novo').length;
+            const agendados = leads.filter(lead => lead.status === 'agendado').length;
+            const compareceu = leads.filter(lead => lead.status === 'compareceu').length;
+            const faltou = leads.filter(lead => lead.status === 'faltou').length;
+            
+            // Taxa de agendamento: % de leads que foram agendados
+            const leadsProcessados = leads.filter(lead => ['agendado', 'compareceu', 'faltou'].includes(lead.status)).length;
+            const taxaAgendamento = total > 0 ? Math.round((leadsProcessados / total) * 100) : 0;
+            
+            // Taxa de comparecimento: % dos agendados que compareceram
+            const totalConsultas = compareceu + faltou;
+            const taxaComparecimento = totalConsultas > 0 ? Math.round((compareceu / totalConsultas) * 100) : 0;
+            
+            // Leads deste mês
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            const leadsMes = leads.filter(lead => {
+                const leadDate = new Date(lead.created_at);
+                return leadDate.getMonth() === currentMonth && leadDate.getFullYear() === currentYear;
+            }).length;
 
--- PARTE 6: FUNÇÕES PERSONALIZADAS
--- =============================================
+            // Atualizar elementos na página
+            document.getElementById('totalLeads').textContent = total;
+            document.getElementById('novosLeads').textContent = novos;
+            document.getElementById('agendadosLeads').textContent = agendados;
+            document.getElementById('compareceuLeads').textContent = compareceu;
+            document.getElementById('faltouLeads').textContent = faltou;
+            document.getElementById('taxaAgendamento').textContent = taxaAgendamento + '%';
+            document.getElementById('taxaComparecimento').textContent = taxaComparecimento + '%';
+            document.getElementById('leadsMes').textContent = leadsMes;
+            
+            console.log('Stats atualizadas');
+        }
 
--- Função para obter estatísticas do usuário
-CREATE OR REPLACE FUNCTION get_user_stats(user_uuid UUID)
-RETURNS JSONB AS $$
-DECLARE
-    stats JSONB;
-    current_month_start DATE;
-BEGIN
-    current_month_start := DATE_TRUNC('month', CURRENT_DATE);
-    
-    SELECT jsonb_build_object(
-        'total_leads', COUNT(*),
-        'leads_novo', COUNT(*) FILTER (WHERE status = 'novo'),
-        'leads_agendado', COUNT(*) FILTER (WHERE status = 'agendado'),
-        'leads_compareceu', COUNT(*) FILTER (WHERE status = 'compareceu'),
-        'leads_faltou', COUNT(*) FILTER (WHERE status = 'faltou'),
-        'leads_mes', COUNT(*) FILTER (WHERE created_at >= current_month_start),
-        'taxa_agendamento', 
-            CASE 
-                WHEN COUNT(*) > 0 THEN 
-                    ROUND((COUNT(*) FILTER (WHERE status IN ('agendado', 'compareceu', 'faltou'))::NUMERIC / COUNT(*)) * 100, 0)
-                ELSE 0 
-            END,
-        'taxa_comparecimento',
-            CASE 
-                WHEN COUNT(*) FILTER (WHERE status IN ('compareceu', 'faltou')) > 0 THEN
-                    ROUND((COUNT(*) FILTER (WHERE status = 'compareceu')::NUMERIC / 
-                          COUNT(*) FILTER (WHERE status IN ('compareceu', 'faltou'))) * 100, 0)
-                ELSE 0
-            END
-    ) INTO stats
-    FROM leads 
-    WHERE user_id = user_uuid;
-    
-    RETURN stats;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+        function renderLeads(filteredLeads = null) {
+            const tbody = document.getElementById('leadsTableBody');
+            const leadsToRender = filteredLeads || leads;
+            
+            if (leadsToRender.length === 0) {
+                let message = 'Clique em "Adicionar Novo Lead" para começar';
+                
+                if (filteredLeads !== null && leads.length > 0) {
+                    message = 'Nenhum lead encontrado com os filtros aplicados';
+                }
+                
+                tbody.innerHTML = `
+                    <tr class="no-leads">
+                        <td colspan="7">
+                            <h3>Nenhum lead encontrado</h3>
+                            <p>${message}</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
 
--- Função para verificar limite de leads (plano gratuito)
-CREATE OR REPLACE FUNCTION check_leads_limit(user_uuid UUID)
-RETURNS BOOLEAN AS $$
-DECLARE
-    current_count INTEGER;
-    user_limit INTEGER;
-    user_plan TEXT;
-BEGIN
-    -- Buscar plano e limite do usuário
-    SELECT 
-        COALESCE(s.plan_type, us.subscription_plan, 'free'),
-        CASE 
-            WHEN COALESCE(s.plan_type, us.subscription_plan, 'free') = 'free' THEN 50
-            WHEN COALESCE(s.plan_type, us.subscription_plan, 'free') = 'pro' THEN 999999
-            WHEN COALESCE(s.plan_type, us.subscription_plan, 'free') = 'enterprise' THEN 999999
-            ELSE 50
-        END
-    INTO user_plan, user_limit
-    FROM user_settings us
-    LEFT JOIN subscriptions s ON us.user_id = s.user_id
-    WHERE us.user_id = user_uuid;
-    
-    -- Contar leads atuais
-    SELECT COUNT(*) INTO current_count
-    FROM leads 
-    WHERE user_id = user_uuid;
-    
-    -- Retornar se está dentro do limite
-    RETURN current_count < user_limit;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+            tbody.innerHTML = leadsToRender.map(lead => `
+                <tr>
+                    <td><strong>${lead.name}</strong></td>
+                    <td>${lead.phone}</td>
+                    <td>${lead.procedure}</td>
+                    <td>${formatDate(lead.created_at)}</td>
+                    <td><span class="status-badge status-${lead.status}">${getStatusText(lead.status)}</span></td>
+                    <td>${lead.observations || '-'}</td>
+                    <td>
+                        <div class="actions">
+                            ${lead.status === 'novo' ? `
+                                <button class="btn btn-success" onclick="updateLeadStatus(${lead.id}, 'agendado')" title="Agendar">
+                                    📅
+                                </button>
+                            ` : ''}
+                            <button class="btn btn-info" onclick="sendWhatsApp('${lead.phone}', '${lead.name}', '${lead.procedure}')" title="WhatsApp">
+                                💬
+                            </button>
+                            ${lead.status === 'agendado' ? `
+                                <button class="btn btn-success" onclick="updateLeadStatus(${lead.id}, 'compareceu')" title="Compareceu">
+                                    ✅
+                                </button>
+                                <button class="btn btn-danger" onclick="updateLeadStatus(${lead.id}, 'faltou')" title="Faltou">
+                                    ❌
+                                </button>
+                            ` : ''}
+                            <button class="btn btn-warning" onclick="editLead(${lead.id})" title="Editar">
+                                ✏️
+                            </button>
+                            <button class="btn btn-danger" onclick="deleteLead(${lead.id})" title="Excluir">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+            console.log('Leads renderizados:', leadsToRender.length);
+        }
 
--- PARTE 7: DADOS INICIAIS
--- =============================================
+        function filterLeads() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            let filtered = leads.filter(lead => {
+                const matchesSearch = lead.name.toLowerCase().includes(searchTerm) || 
+                                    lead.phone.includes(searchTerm);
+                const matchesStatus = !statusFilter || lead.status === statusFilter;
+                return matchesSearch && matchesStatus;
+            });
+            
+            // Aplicar filtro de período
+            filtered = applyPeriodFilter(filtered);
+            
+            renderLeads(filtered);
+            updateFilteredStats(filtered);
+            console.log('Filtros aplicados, leads encontrados:', filtered.length);
+        }
 
--- Inserir dados de exemplo para desenvolvimento (opcional)
--- Descomente se quiser dados de teste
-/*
-INSERT INTO user_settings (user_id, clinic_name, whatsapp) VALUES 
-('00000000-0000-0000-0000-000000000000', 'Clínica Exemplo', '(11) 99999-9999');
-*/
+        function applyPeriodFilter(leadsArray) {
+            if (currentPeriodFilter === 'all') {
+                return leadsArray;
+            }
+            
+            const now = new Date();
+            let startDate;
+            
+            switch(currentPeriodFilter) {
+                case 'today':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    break;
+                case 'week':
+                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    break;
+                case 'month':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    break;
+                case 'quarter':
+                    startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+                    break;
+                default:
+                    return leadsArray;
+            }
+            
+            return leadsArray.filter(lead => new Date(lead.created_at) >= startDate);
+        }
 
--- PARTE 8: VIEWS PARA RELATÓRIOS
--- =============================================
+        function filterByPeriod(period) {
+            currentPeriodFilter = period;
+            
+            // Atualizar botões ativos
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-period="${period}"]`).classList.add('active');
+            
+            filterLeads();
+            console.log('Filtro de período aplicado:', period);
+        }
 
--- View para estatísticas mensais
-CREATE OR REPLACE VIEW monthly_stats AS
-SELECT 
-    user_id,
-    DATE_TRUNC('month', created_at) as month,
-    COUNT(*) as total_leads,
-    COUNT(*) FILTER (WHERE status = 'novo') as novos,
-    COUNT(*) FILTER (WHERE status = 'agendado') as agendados,
-    COUNT(*) FILTER (WHERE status = 'compareceu') as compareceram,
-    COUNT(*) FILTER (WHERE status = 'faltou') as faltaram,
-    ROUND(
-        (COUNT(*) FILTER (WHERE status IN ('agendado', 'compareceu', 'faltou'))::NUMERIC / 
-         NULLIF(COUNT(*), 0)) * 100, 1
-    ) as taxa_agendamento
-FROM leads
-GROUP BY user_id, DATE_TRUNC('month', created_at)
-ORDER BY month DESC;
+        function updateFilteredStats(filteredLeads) {
+            const total = filteredLeads.length;
+            const novos = filteredLeads.filter(lead => lead.status === 'novo').length;
+            const agendados = filteredLeads.filter(lead => lead.status === 'agendado').length;
+            const compareceu = filteredLeads.filter(lead => lead.status === 'compareceu').length;
+            const faltou = filteredLeads.filter(lead => lead.status === 'faltou').length;
+            
+            const leadsProcessados = filteredLeads.filter(lead => ['agendado', 'compareceu', 'faltou'].includes(lead.status)).length;
+            const taxaAgendamento = total > 0 ? Math.round((leadsProcessados / total) * 100) : 0;
+            
+            const totalConsultas = compareceu + faltou;
+            const taxaComparecimento = totalConsultas > 0 ? Math.round((compareceu / totalConsultas) * 100) : 0;
+            
+            let leadsPeriodo;
+            if (currentPeriodFilter === 'all') {
+                const currentMonth = new Date().getMonth();
+                const currentYear = new Date().getFullYear();
+                leadsPeriodo = leads.filter(lead => {
+                    const leadDate = new Date(lead.created_at);
+                    return leadDate.getMonth() === currentMonth && leadDate.getFullYear() === currentYear;
+                }).length;
+            } else {
+                leadsPeriodo = total;
+            }
 
--- PARTE 9: VERIFICAÇÃO FINAL
--- =============================================
+            document.getElementById('totalLeads').textContent = total;
+            document.getElementById('novosLeads').textContent = novos;
+            document.getElementById('agendadosLeads').textContent = agendados;
+            document.getElementById('compareceuLeads').textContent = compareceu;
+            document.getElementById('faltouLeads').textContent = faltou;
+            document.getElementById('taxaAgendamento').textContent = taxaAgendamento + '%';
+            document.getElementById('taxaComparecimento').textContent = taxaComparecimento + '%';
+            document.getElementById('leadsMes').textContent = leadsPeriodo;
+        }
 
--- Verificar se todas as tabelas foram criadas
-SELECT 
-    schemaname,
-    tablename,
-    tableowner,
-    hasindexes,
-    hasrules,
-    hastriggers
-FROM pg_tables 
-WHERE schemaname = 'public' 
-  AND tablename IN ('user_settings', 'leads', 'subscriptions')
-ORDER BY tablename;
+        function sendWhatsApp(phone, name, procedure) {
+            const message = userSettings.default_message
+                .replace('{nome}', name)
+                .replace('{clinica}', userSettings.clinic_name)
+                .replace('{procedimento}', procedure);
+            
+            const cleanPhone = phone.replace(/\D/g, '');
+            const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone;
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappURL = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
+            
+            window.open(whatsappURL, '_blank');
+            
+            showAlert(`✅ WhatsApp aberto para ${name}!`, 'success');
+        }
 
--- Verificar políticas RLS
-SELECT 
-    schemaname,
-    tablename,
-    policyname,
-    permissive,
-    cmd
-FROM pg_policies 
-WHERE schemaname = 'public'
-  AND tablename IN ('user_settings', 'leads', 'subscriptions')
-ORDER BY tablename, policyname;
+        function editLead(id) {
+            const lead = leads.find(l => l.id === id);
+            if (!lead) {
+                console.error('Lead não encontrado:', id);
+                return;
+            }
+            
+            currentEditId = id;
+            document.getElementById('modalTitle').textContent = 'Editar Lead';
+            document.getElementById('patientName').value = lead.name;
+            document.getElementById('phone').value = lead.phone;
+            document.getElementById('procedure').value = lead.procedure;
+            document.getElementById('status').value = lead.status;
+            document.getElementById('observations').value = lead.observations || '';
+            
+            document.getElementById('addLeadModal').style.display = 'block';
+            console.log('Modal de edição aberto para lead:', id);
+        }
 
--- Verificar índices criados
-SELECT 
-    schemaname,
-    tablename,
-    indexname,
-    indexdef
-FROM pg_indexes
-WHERE schemaname = 'public'
-  AND tablename IN ('user_settings', 'leads', 'subscriptions')
-ORDER BY tablename, indexname;
+        // Funções de Configurações
+        function showSettingsModal() {
+            // Carregar valores atuais
+            document.getElementById('clinicName').value = userSettings.clinic_name || '';
+            document.getElementById('clinicWhatsapp').value = userSettings.whatsapp || '';
+            document.getElementById('defaultMessage').value = userSettings.default_message || '';
+            
+            document.getElementById('settingsModal').style.display = 'block';
+        }
 
--- =============================================
--- INSTRUÇÕES DE USO
--- =============================================
+        async function saveSettings() {
+            const clinicName = document.getElementById('clinicName').value;
+            const clinicWhatsapp = document.getElementById('clinicWhatsapp').value;
+            const defaultMessage = document.getElementById('defaultMessage').value;
+            
+            const updatedSettings = {
+                clinic_name: clinicName,
+                whatsapp: clinicWhatsapp,
+                default_message: defaultMessage,
+                updated_at: new Date().toISOString()
+            };
+            
+            try {
+                const { data, error } = await supabase
+                    .from('user_settings')
+                    .update(updatedSettings)
+                    .eq('user_id', currentUser.id)
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                
+                userSettings = { ...userSettings, ...data };
+                closeModal('settingsModal');
+                showAlert('Configurações salvas com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('Erro ao salvar configurações:', error);
+                showAlert('Erro ao salvar configurações: ' + error.message, 'error');
+            }
+        }
 
-/*
-COMO USAR ESTE SCRIPT:
+        function showSubscriptionModal() {
+            document.getElementById('subscriptionModal').style.display = 'block';
+        }
 
-1. BACKUP: Se você já tem dados, faça backup primeiro!
+        // Funções de Assinatura
+        function upgradePlan(planType) {
+            if (planType === 'pro') {
+                showAlert('Redirecionando para o pagamento...', 'info');
+                // Aqui você integraria com o Stripe
+                // window.location.href = 'checkout_url_stripe';
+            } else if (planType === 'enterprise') {
+                showAlert('Entre em contato: contato@flashleads.com', 'info');
+            }
+        }
 
-2. EXECUÇÃO:
-   - Vá para o SQL Editor no Supabase
-   - Cole TODO este código
-   - Clique em "Run" (▶️)
-   - Aguarde a execução completa
+        // Funções Auxiliares
+        function openAddLeadModal() {
+            currentEditId = null;
+            document.getElementById('modalTitle').textContent = 'Adicionar Novo Lead';
+            document.getElementById('leadForm').reset();
+            document.getElementById('addLeadModal').style.display = 'block';
+            console.log('Modal de adicionar aberto');
+        }
 
-3. VERIFICAÇÃO:
-   - Vá para "Table Editor"
-   - Verifique se as tabelas foram criadas:
-     ✅ user_settings
-     ✅ leads  
-     ✅ subscriptions
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            if (modalId === 'addLeadModal') {
+                currentEditId = null;
+                document.getElementById('modalTitle').textContent = 'Adicionar Novo Lead';
+            }
+        }
 
-4. TESTE:
-   - Teste o login no seu Flash Leads
-   - Tente adicionar um lead
-   - Verifique se as estatísticas funcionam
+        function refreshSystem() {
+            console.log('🔄 Iniciando atualização do sistema...');
+            
+            // Mostrar feedback visual
+            const refreshBtn = document.querySelector('.btn-success');
+            const originalText = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '⏳ Atualizando...';
+            refreshBtn.disabled = true;
+            refreshBtn.style.opacity = '0.7';
+            
+            // Simular carregamento e atualizar dados
+            setTimeout(async () => {
+                try {
+                    // Recarregar dados
+                    await loadLeads();
+                    await loadUserData();
+                    
+                    // Resetar filtros
+                    document.getElementById('searchInput').value = '';
+                    document.getElementById('statusFilter').value = '';
+                    filterByPeriod('all');
+                    
+                    // Renderizar tudo novamente
+                    updateStats();
+                    renderLeads();
+                    
+                    console.log('✅ Sistema atualizado com sucesso');
+                    showAlert('✅ Sistema atualizado com sucesso!', 'success');
+                    
+                } catch (error) {
+                    console.error('❌ Erro durante atualização:', error);
+                    showAlert('❌ Erro ao atualizar sistema!', 'error');
+                } finally {
+                    // Restaurar botão
+                    refreshBtn.innerHTML = originalText;
+                    refreshBtn.disabled = false;
+                    refreshBtn.style.opacity = '1';
+                }
+            }, 800);
+        }
 
-5. PROBLEMAS:
-   - Se der erro, execute o script em partes
-   - Verifique o console para mensagens de erro
-   - Certifique-se que as credenciais do Supabase estão corretas no HTML
+        function showAlert(message, type) {
+            // Remover alertas existentes
+            const existingAlerts = document.querySelectorAll('.alert');
+            existingAlerts.forEach(alert => alert.remove());
+            
+            // Criar novo alerta
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            // Inserir no topo da página
+            const container = document.querySelector('.auth-card') || document.querySelector('.container');
+            if (container) {
+                container.insertBefore(alert, container.firstChild);
+                
+                // Auto-scroll para o topo se necessário
+                if (document.querySelector('.container')) {
+                    container.scrollTop = 0;
+                }
+            }
+            
+            // Remover após 5 segundos
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
 
-CARACTERÍSTICAS PRINCIPAIS:
-✅ Compatível com o Flash Leads migrado
-✅ Segurança RLS habilitada
-✅ Triggers para updated_at automático
-✅ Índices para performance
-✅ Funções para estatísticas
-✅ Controle de limites por plano
-✅ Views para relatórios
-✅ Estrutura otimizada e limpa
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('pt-BR');
+        }
 
-ESTRUTURA DAS TABELAS:
-- user_settings: Configurações da clínica/usuário
-- leads: Dados dos leads (nome, telefone, status, etc.)
-- subscriptions: Controle de planos e assinaturas
+        function getStatusText(status) {
+            const statusMap = {
+                'novo': 'Novo',
+                'agendado': 'Agendado',
+                'compareceu': 'Compareceu',
+                'faltou': 'Faltou'
+            };
+            return statusMap[status] || status;
+        }
 
-PRÓXIMOS PASSOS:
-1. Execute este SQL no Supabase
-2. Teste o Flash Leads no navegador
-3. Faça login/registro para testar
-4. Adicione alguns leads de teste
-5. Verifique se as estatísticas funcionam
-*/
+        // Tornar funções globais para uso nos botões
+        window.filterByPeriod = filterByPeriod;
+        window.updateLeadStatus = updateLeadStatus;
+        window.sendWhatsApp = sendWhatsApp;
+        window.editLead = editLead;
+        window.deleteLead = deleteLead;
+        window.openAddLeadModal = openAddLeadModal;
+        window.closeModal = closeModal;
+        window.showSettingsModal = showSettingsModal;
+        window.saveSettings = saveSettings;
+        window.showSubscriptionModal = showSubscriptionModal;
+        window.upgradePlan = upgradePlan;
+        window.refreshSystem = refreshSystem;
+        window.showLogin = showLogin;
+        window.showRegister = showRegister;
+        window.handleLogin = handleLogin;
+        window.handleRegister = handleRegister;
+        window.loginWithGoogle = loginWithGoogle;
+        window.logout = logout;
+
+        console.log('✅ Flash Leads SaaS carregado com sucesso!');
+    </script>
+</body>
+</html>
