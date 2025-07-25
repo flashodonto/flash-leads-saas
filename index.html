@@ -8,9 +8,6 @@
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- Stripe -->
-    <script src="https://js.stripe.com/v3/"></script>
-    
     <style>
         * {
             margin: 0;
@@ -22,7 +19,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 10px;
+            padding: 20px;
         }
 
         /* Auth Screens */
@@ -213,15 +210,6 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
-        }
-
-        .subscription-badge {
-            background: linear-gradient(135deg, #27ae60, #229954);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            display: none; /* Ocultar sistema de planos */
         }
 
         .controls {
@@ -470,77 +458,10 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Subscription Plans */
-        .plans-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-top: 30px;
-        }
-
-        .plan-card {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            text-align: center;
-            border: 3px solid transparent;
-            transition: all 0.3s ease;
-        }
-
-        .plan-card.featured {
-            border-color: #3498db;
-            transform: scale(1.05);
-        }
-
-        .plan-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        }
-
-        .plan-name {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 10px;
-        }
-
-        .plan-price {
-            font-size: 3em;
-            font-weight: bold;
-            color: #3498db;
-            margin-bottom: 5px;
-        }
-
-        .plan-price small {
-            font-size: 0.3em;
-            color: #7f8c8d;
-        }
-
-        .plan-features {
-            list-style: none;
-            margin: 20px 0;
-            text-align: left;
-        }
-
-        .plan-features li {
-            padding: 8px 0;
-            border-bottom: 1px solid #f8f9fa;
-        }
-
-        .plan-features li:before {
-            content: "✅ ";
-            margin-right: 10px;
-        }
-
         /* Responsividade */
         @media (max-width: 768px) {
             body {
-                padding: 5px;
-            }
-
-            .container {
-                border-radius: 10px;
+                padding: 10px;
             }
 
             .header {
@@ -614,14 +535,6 @@
                 padding: 14px 20px;
                 font-size: 16px;
             }
-
-            .plans-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .plan-card.featured {
-                transform: none;
-            }
         }
 
         @media (max-width: 480px) {
@@ -657,15 +570,6 @@
             background: #d1ecf1;
             color: #0c5460;
             border: 1px solid #bee5eb;
-        }
-
-        /* Navigation Tabs */
-        .nav-tabs {
-            display: none;
-        }
-
-        .content-area {
-            display: block;
         }
     </style>
 </head>
@@ -941,11 +845,6 @@ Posso te ajudar com mais informações? 📞</textarea>
                 </button>
             </div>
         </div>
-    </div>
-
-    <!-- Subscription Modal -->
-    <div id="subscriptionModal" class="modal" style="display: none;">
-        <!-- Modal removido - sistema de planos desabilitado -->
     </div>
 
     <script>
@@ -1653,17 +1552,6 @@ Posso te ajudar com mais informações? 📞</textarea>
             }
         }
 
-        function showSubscriptionModal() {
-            // Sistema de planos removido
-            showAlert('Sistema focado em gestão de leads! 🚀', 'info');
-        }
-
-        // Funções de Assinatura
-        function upgradePlan(planType) {
-            // Sistema de planos removido
-            showAlert('Funcionalidade de planos removida - foco total nos leads! 💪', 'info');
-        }
-
         // Funções Auxiliares
         function openAddLeadModal() {
             currentEditId = null;
@@ -1775,8 +1663,6 @@ Posso te ajudar com mais informações? 📞</textarea>
         window.closeModal = closeModal;
         window.showSettingsModal = showSettingsModal;
         window.saveSettings = saveSettings;
-        window.showSubscriptionModal = showSubscriptionModal;
-        window.upgradePlan = upgradePlan;
         window.refreshSystem = refreshSystem;
         window.showLogin = showLogin;
         window.showRegister = showRegister;
