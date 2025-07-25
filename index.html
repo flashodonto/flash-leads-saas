@@ -1,4 +1,287 @@
-<option value="Endodontia">Endodontia</option>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flash Leads SaaS - Gestão de Leads Profissional</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+
+        .auth-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .auth-card { background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        .auth-card h1 { color: #2c3e50; margin-bottom: 10px; font-size: 2.5em; }
+        .auth-card p { color: #7f8c8d; margin-bottom: 30px; font-size: 1.1em; }
+
+        .form-group { margin-bottom: 20px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #2c3e50; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; transition: border-color 0.3s ease; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #3498db; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: all 0.3s ease; font-weight: 500; }
+        .btn-primary { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+        .btn-secondary { background: #f8f9fa; color: #2c3e50; border: 2px solid #e9ecef; }
+        .btn-success { background: linear-gradient(135deg, #27ae60, #229954); color: white; font-size: 14px; padding: 8px 16px; }
+        .btn-info { background: linear-gradient(135deg, #3498db, #2980b9); color: white; font-size: 14px; padding: 8px 16px; }
+        .btn-warning { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; font-size: 14px; padding: 8px 16px; }
+        .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; font-size: 14px; padding: 8px 16px; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+
+        .auth-switch { margin-top: 20px; color: #7f8c8d; }
+        .auth-switch a { color: #3498db; text-decoration: none; font-weight: 600; }
+        .auth-switch a:hover { text-decoration: underline; }
+
+        .container { display: none; max-width: 1200px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); color: white; padding: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; font-weight: 300; }
+        .header p { font-size: 1.1em; opacity: 0.9; }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: bold; }
+
+        .controls { padding: 30px; background: #f8f9fa; border-bottom: 1px solid #e9ecef; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .stat-number { font-size: 2em; font-weight: bold; color: #2c3e50; }
+        .stat-label { font-size: 0.9em; color: #7f8c8d; margin-top: 5px; }
+
+        .controls-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .search-container { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .search-input { padding: 12px 16px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; width: 250px; transition: border-color 0.3s ease; }
+        .search-input:focus { outline: none; border-color: #3498db; }
+        .status-filter { display: flex; gap: 10px; align-items: center; }
+        .status-filter select { padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; }
+
+        .period-filter { margin-bottom: 15px; }
+        .period-btn { font-size: 14px; padding: 8px 16px; transition: all 0.3s ease; }
+        .period-btn.active { background: linear-gradient(135deg, #27ae60, #229954); color: white; transform: translateY(-1px); box-shadow: 0 3px 10px rgba(39, 174, 96, 0.3); }
+        .period-btn:not(.active):hover { background: linear-gradient(135deg, #74b9ff, #0984e3); }
+
+        .table-container { padding: 30px; overflow-x: auto; }
+        .leads-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .leads-table th { background: linear-gradient(135deg, #34495e, #2c3e50); color: white; padding: 15px; text-align: left; font-weight: 500; }
+        .leads-table td { padding: 15px; border-bottom: 1px solid #e9ecef; }
+        .leads-table tr:hover { background: #f8f9fa; }
+
+        .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+        .status-novo { background: #fff3cd; color: #856404; }
+        .status-agendado { background: #d4edda; color: #155724; }
+        .status-compareceu { background: #d1e7dd; color: #0a3622; }
+        .status-faltou { background: #f8d7da; color: #58151c; }
+
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 15px; padding: 30px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e9ecef; padding-bottom: 15px; }
+        .modal-header h3 { color: #2c3e50; font-size: 1.5em; }
+        .close { font-size: 24px; font-weight: bold; cursor: pointer; color: #999; transition: color 0.3s; }
+        .close:hover { color: #333; }
+
+        .no-leads { text-align: center; padding: 40px; color: #7f8c8d; }
+        .loading { display: flex; justify-content: center; align-items: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+
+        /* Reports Styles */
+        .reports-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .report-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; border-left: 4px solid #3498db; }
+        .report-number { font-size: 2em; font-weight: bold; color: #2c3e50; margin-bottom: 5px; }
+        .report-label { color: #7f8c8d; font-size: 0.9em; }
+        .chart-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .chart-bar { display: flex; align-items: center; margin-bottom: 10px; gap: 10px; }
+        .chart-label { min-width: 120px; font-size: 14px; color: #2c3e50; }
+        .chart-progress { flex: 1; height: 20px; background: #ecf0f1; border-radius: 10px; overflow: hidden; }
+        .chart-fill { height: 100%; background: linear-gradient(135deg, #3498db, #2980b9); border-radius: 10px; transition: width 0.3s ease; }
+        .chart-value { min-width: 40px; font-weight: bold; color: #2c3e50; font-size: 14px; }
+        .insights-container { background: #e8f5e8; padding: 20px; border-radius: 10px; border-left: 4px solid #27ae60; }
+        .insights-container h4 { color: #27ae60; margin-bottom: 15px; }
+        .insights-list { list-style: none; padding: 0; }
+        .insights-list li { padding: 8px 0; border-bottom: 1px solid rgba(39, 174, 96, 0.1); color: #2c3e50; }
+        .insights-list li:before { content: "💡 "; margin-right: 8px; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .header { padding: 20px; flex-direction: column; gap: 15px; text-align: center; }
+            .header h1 { font-size: 1.8em; }
+            .controls { padding: 20px; }
+            .controls-top { flex-direction: column; align-items: stretch; gap: 15px; }
+            .search-container { flex-direction: column; gap: 10px; }
+            .search-input { width: 100%; }
+            .status-filter { flex-direction: column; align-items: stretch; gap: 8px; }
+            .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .table-container { padding: 15px; }
+            .leads-table { font-size: 14px; min-width: 700px; }
+            .leads-table th, .leads-table td { padding: 12px 8px; }
+            .actions { flex-direction: column; gap: 4px; min-width: 60px; }
+            .modal-content { width: 95%; margin: 10px; padding: 20px; }
+            .btn { padding: 14px 20px; font-size: 16px; }
+            .reports-grid { grid-template-columns: repeat(2, 1fr); }
+            .chart-label { min-width: 80px; }
+        }
+        @media (max-width: 480px) {
+            .stats { grid-template-columns: 1fr; }
+            .header h1 { font-size: 1.5em; }
+            .reports-grid { grid-template-columns: 1fr; }
+            .leads-table { min-width: 600px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="authScreen" class="auth-container">
+        <div class="auth-card">
+            <h1>⚡ Flash Leads</h1>
+            <p>Sistema Profissional de Gestão de Leads</p>
+            <div id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" placeholder="seu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Senha</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required>
+                </div>
+                <button class="btn btn-primary" onclick="handleLogin()" style="width: 100%; margin-bottom: 15px;">Entrar</button>
+                <button class="btn btn-secondary" onclick="loginWithGoogle()" style="width: 100%; margin-bottom: 15px;">🔍 Entrar com Google</button>
+                <div class="auth-switch">Não tem conta? <a href="#" onclick="showRegister()">Criar conta</a></div>
+            </div>
+            <div id="registerForm" style="display: none;">
+                <div class="form-group">
+                    <label for="registerName">Nome Completo</label>
+                    <input type="text" id="registerName" placeholder="Seu nome" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" placeholder="seu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Senha</label>
+                    <input type="password" id="registerPassword" placeholder="••••••••" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerClinic">Nome da Clínica</label>
+                    <input type="text" id="registerClinic" placeholder="Sua clínica" required>
+                </div>
+                <button class="btn btn-primary" onclick="handleRegister()" style="width: 100%; margin-bottom: 15px;">Criar Conta</button>
+                <div class="auth-switch">Já tem conta? <a href="#" onclick="showLogin()">Fazer login</a></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="mainApp" class="container">
+        <div class="header">
+            <div>
+                <h1>⚡ Flash Leads</h1>
+                <p>Sistema Inteligente de Gestão de Leads Odontológicos</p>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">U</div>
+                <span id="userName">Usuário</span>
+                <button class="btn btn-secondary" onclick="logout()" style="margin-left: 15px; padding: 8px 16px; width: auto;">Sair</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="stats">
+                <div class="stat-card"><div class="stat-number" id="totalLeads">0</div><div class="stat-label">Total de Leads</div></div>
+                <div class="stat-card"><div class="stat-number" id="novosLeads">0</div><div class="stat-label">Leads Novos</div></div>
+                <div class="stat-card"><div class="stat-number" id="agendadosLeads">0</div><div class="stat-label">Agendados</div></div>
+                <div class="stat-card"><div class="stat-number" id="compareceuLeads">0</div><div class="stat-label">Compareceram</div></div>
+                <div class="stat-card"><div class="stat-number" id="faltouLeads">0</div><div class="stat-label">Faltaram</div></div>
+                <div class="stat-card"><div class="stat-number" id="leadsMes">0</div><div class="stat-label">Leads Este Mês</div></div>
+                <div class="stat-card"><div class="stat-number" id="taxaAgendamento">0%</div><div class="stat-label">Taxa de Agendamento</div></div>
+                <div class="stat-card"><div class="stat-number" id="taxaComparecimento">0%</div><div class="stat-label">Taxa de Comparecimento</div></div>
+            </div>
+
+            <div class="controls-top">
+                <div class="search-container">
+                    <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar por nome ou telefone...">
+                    <div class="status-filter">
+                        <label>Filtrar por status:</label>
+                        <select id="statusFilter">
+                            <option value="">Todos os status</option>
+                            <option value="novo">Novo</option>
+                            <option value="agendado">Agendado</option>
+                            <option value="compareceu">Compareceu</option>
+                            <option value="faltou">Faltou</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="period-filter">
+                    <label><strong>Filtrar por período:</strong></label>
+                    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center;">
+                        <button class="btn btn-info period-btn active" data-period="all" onclick="filterByPeriod('all')">Todos</button>
+                        <button class="btn btn-info period-btn" data-period="today" onclick="filterByPeriod('today')">Hoje</button>
+                        <button class="btn btn-info period-btn" data-period="week" onclick="filterByPeriod('week')">Esta Semana</button>
+                        <button class="btn btn-info period-btn" data-period="month" onclick="filterByPeriod('month')">Este Mês</button>
+                        <button class="btn btn-info period-btn" data-period="quarter" onclick="filterByPeriod('quarter')">Trimestre</button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="openAddLeadModal()">➕ Adicionar Novo Lead</button>
+                    <button class="btn btn-info" onclick="showSettingsModal()">⚙️ Configurações</button>
+                    <button class="btn btn-warning" onclick="showReportsModal()">📊 Relatórios</button>
+                    <button class="btn btn-success" onclick="refreshSystem()">🔄 Atualizar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="leads-table">
+                <thead>
+                    <tr>
+                        <th>Nome do Paciente</th>
+                        <th>Telefone</th>
+                        <th>Procedimento</th>
+                        <th>Data de Entrada</th>
+                        <th>Status</th>
+                        <th>Observações</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="leadsTableBody">
+                    <tr class="no-leads">
+                        <td colspan="7">
+                            <div class="loading"><div class="spinner"></div></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="addLeadModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Adicionar Novo Lead</h3>
+                <span class="close" onclick="closeModal('addLeadModal')">&times;</span>
+            </div>
+            <form id="leadForm">
+                <div class="form-group">
+                    <label for="patientName">Nome do Paciente *</label>
+                    <input type="text" id="patientName" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Telefone *</label>
+                    <input type="tel" id="phone" required>
+                </div>
+                <div class="form-group">
+                    <label for="procedure">Procedimento Desejado *</label>
+                    <select id="procedure" required>
+                        <option value="">Selecione o procedimento</option>
+                        <option value="Limpeza/Profilaxia">Limpeza/Profilaxia</option>
+                        <option value="Clareamento">Clareamento</option>
+                        <option value="Implante">Implante</option>
+                        <option value="Ortodontia">Ortodontia</option>
+                        <option value="Prótese">Prótese</option>
+                        <option value="Endodontia">Endodontia</option>
                         <option value="Cirurgia">Cirurgia</option>
                         <option value="Periodontia">Periodontia</option>
                         <option value="Outros">Outros</option>
@@ -24,7 +307,6 @@
         </div>
     </div>
 
-    <!-- Settings Modal -->
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -38,7 +320,6 @@
             <div class="form-group">
                 <label><strong>WhatsApp da Clínica (opcional):</strong></label>
                 <input type="tel" id="clinicWhatsapp" placeholder="(11) 99999-9999">
-                <small style="color: #666; font-size: 12px;">Para receber mensagens dos leads (opcional)</small>
             </div>
             <div class="form-group">
                 <label><strong>Mensagem Padrão:</strong></label>
@@ -48,27 +329,22 @@ Tudo bem? Aqui é da {clinica} 🦷
 
 Vi que você tem interesse em {procedimento}. Que tal agendar uma consulta?
 
-Temos horários disponíveis esta semana e condições especiais para você!
+Temos horários disponíveis esta semana!
 
-Posso te ajudar com mais informações? 📞</textarea>
-                <small style="color: #666; font-size: 12px;">Use: {nome}, {clinica}, {procedimento} para personalizar</small>
+Posso te ajudar? 📞</textarea>
             </div>
             <div class="form-group">
-                <button onclick="saveSettings()" class="btn btn-primary" style="width: 100%;">
-                    💾 Salvar Configurações
-                </button>
+                <button onclick="saveSettings()" class="btn btn-primary" style="width: 100%;">💾 Salvar Configurações</button>
             </div>
         </div>
     </div>
 
-    <!-- Reports Modal -->
     <div id="reportsModal" class="modal">
         <div class="modal-content" style="max-width: 900px;">
             <div class="modal-header">
                 <h3>📊 Relatórios e Análises</h3>
                 <span class="close" onclick="closeModal('reportsModal')">&times;</span>
             </div>
-            
             <div style="margin-bottom: 20px;">
                 <label><strong>Período para Análise:</strong></label>
                 <div style="display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap;">
@@ -79,23 +355,17 @@ Posso te ajudar com mais informações? 📞</textarea>
                     <button class="btn btn-info" onclick="generateReport('all')">Todos</button>
                 </div>
             </div>
-            
             <div id="reportResults">
-                <p style="text-align: center; color: #666; padding: 40px;">
-                    Selecione um período acima para gerar o relatório
-                </p>
+                <p style="text-align: center; color: #666; padding: 40px;">Selecione um período acima para gerar o relatório</p>
             </div>
         </div>
     </div>
 
     <script>
-        // Configuração do Supabase
         const SUPABASE_URL = 'https://bjqfxroulfxyqhqopnns.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcWZ4cm91bGZ4eXFocW9wbm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNTkzODEsImV4cCI6MjA2ODgzNTM4MX0.7TRJhwzvbHK23rQP2T6azq6c2mVSDPBgfgwadpZxbjg';
-        
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // Estado da aplicação
         let currentUser = null;
         let currentEditId = null;
         let currentPeriodFilter = 'all';
@@ -103,71 +373,34 @@ Posso te ajudar com mais informações? 📞</textarea>
         let userSettings = {
             clinic_name: 'Minha Clínica',
             whatsapp: '',
-            default_message: 'Olá {nome}! 😊\n\nTudo bem? Aqui é da {clinica} 🦷\n\nVi que você tem interesse em {procedimento}. Que tal agendar uma consulta?\n\nTemos horários disponíveis esta semana e condições especiais para você!\n\nPosso te ajudar com mais informações? 📞',
+            default_message: 'Olá {nome}! 😊\n\nTudo bem? Aqui é da {clinica} 🦷\n\nVi que você tem interesse em {procedimento}. Que tal agendar uma consulta?\n\nTemos horários disponíveis esta semana!\n\nPosso te ajudar? 📞',
             auto_reminders: false,
             reminder_days: 2
         };
 
-        // Inicialização
         document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🚀 Flash Leads SaaS iniciando...');
-            
-            // Verificar se usuário está logado
             const { data: { session } } = await supabase.auth.getSession();
+            if (session) { currentUser = session.user; showMainApp(); } 
+            else { showAuthScreen(); }
             
-            if (session) {
-                currentUser = session.user;
-                showMainApp();
-            } else {
-                showAuthScreen();
-            }
-            
-            // Listener para mudanças de autenticação
             supabase.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_IN') {
-                    currentUser = session.user;
-                    showMainApp();
-                } else if (event === 'SIGNED_OUT') {
-                    currentUser = null;
-                    showAuthScreen();
-                }
+                if (event === 'SIGNED_IN') { currentUser = session.user; showMainApp(); } 
+                else if (event === 'SIGNED_OUT') { currentUser = null; showAuthScreen(); }
             });
         });
 
-        // Funções de Autenticação
-        function showLogin() {
-            document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('registerForm').style.display = 'none';
-        }
-
-        function showRegister() {
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'block';
-        }
+        function showLogin() { document.getElementById('loginForm').style.display = 'block'; document.getElementById('registerForm').style.display = 'none'; }
+        function showRegister() { document.getElementById('loginForm').style.display = 'none'; document.getElementById('registerForm').style.display = 'block'; }
 
         async function handleLogin() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
-            
-            if (!email || !password) {
-                showAlert('Por favor, preencha todos os campos!', 'error');
-                return;
-            }
-            
+            if (!email || !password) { showAlert('Preencha todos os campos!', 'error'); return; }
             try {
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-                
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
-                
-                showAlert('Login realizado com sucesso!', 'success');
-                
-            } catch (error) {
-                console.error('Erro no login:', error);
-                showAlert('Erro no login: ' + error.message, 'error');
-            }
+                showAlert('Login realizado!', 'success');
+            } catch (error) { showAlert('Erro: ' + error.message, 'error'); }
         }
 
         async function handleRegister() {
@@ -175,66 +408,35 @@ Posso te ajudar com mais informações? 📞</textarea>
             const email = document.getElementById('registerEmail').value;
             const password = document.getElementById('registerPassword').value;
             const clinic = document.getElementById('registerClinic').value;
-            
-            if (!name || !email || !password || !clinic) {
-                showAlert('Por favor, preencha todos os campos!', 'error');
-                return;
-            }
-            
             try {
                 const { data, error } = await supabase.auth.signUp({
-                    email: email,
-                    password: password,
-                    options: {
-                        data: {
-                            full_name: name,
-                            clinic_name: clinic
-                        }
-                    }
+                    email, password,
+                    options: { data: { full_name: name, clinic_name: clinic } }
                 });
-                
                 if (error) throw error;
-                
-                showAlert('Conta criada com sucesso! Verifique seu email.', 'success');
+                showAlert('Conta criada! Verifique seu email.', 'success');
                 showLogin();
-                
-            } catch (error) {
-                console.error('Erro no registro:', error);
-                showAlert('Erro ao criar conta: ' + error.message, 'error');
-            }
+            } catch (error) { showAlert('Erro: ' + error.message, 'error'); }
         }
 
         async function loginWithGoogle() {
             try {
                 const { data, error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
-                    options: {
-                        redirectTo: window.location.origin
-                    }
+                    options: { redirectTo: window.location.origin }
                 });
-                
                 if (error) throw error;
-                
-            } catch (error) {
-                console.error('Erro no login com Google:', error);
-                showAlert('Erro no login com Google: ' + error.message, 'error');
-            }
+            } catch (error) { showAlert('Erro Google: ' + error.message, 'error'); }
         }
 
         async function logout() {
             try {
                 const { error } = await supabase.auth.signOut();
                 if (error) throw error;
-                
-                showAlert('Logout realizado com sucesso!', 'success');
-                
-            } catch (error) {
-                console.error('Erro no logout:', error);
-                showAlert('Erro no logout: ' + error.message, 'error');
-            }
+                showAlert('Logout realizado!', 'success');
+            } catch (error) { showAlert('Erro logout: ' + error.message, 'error'); }
         }
 
-        // Funções de Interface
         function showAuthScreen() {
             document.getElementById('authScreen').style.display = 'flex';
             document.getElementById('mainApp').style.display = 'none';
@@ -243,14 +445,8 @@ Posso te ajudar com mais informações? 📞</textarea>
         async function showMainApp() {
             document.getElementById('authScreen').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
-            
-            // Configurar informações do usuário
             setupUserInfo();
-            
-            // Setup event listeners
             setupEventListeners();
-            
-            // Carregar dados
             await loadUserData();
             await loadLeads();
             updateStats();
@@ -259,50 +455,29 @@ Posso te ajudar com mais informações? 📞</textarea>
 
         function setupUserInfo() {
             const userName = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
-            const userAvatar = userName.charAt(0).toUpperCase();
-            
             document.getElementById('userName').textContent = userName;
-            document.getElementById('userAvatar').textContent = userAvatar;
+            document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
         }
 
         function setupEventListeners() {
-            // Busca e filtros
             document.getElementById('searchInput').addEventListener('input', filterLeads);
             document.getElementById('statusFilter').addEventListener('change', filterLeads);
-            
-            // Modal form
             document.getElementById('leadForm').addEventListener('submit', handleFormSubmit);
-            
-            // Fechar modal clicando fora
             window.addEventListener('click', function(event) {
-                if (event.target.classList.contains('modal')) {
-                    event.target.style.display = 'none';
-                }
+                if (event.target.classList.contains('modal')) event.target.style.display = 'none';
             });
-            
-            console.log('Event listeners configurados');
         }
 
-        // Funções de Dados
         async function loadUserData() {
             try {
-                // Carregar configurações do usuário
                 const { data: settings, error } = await supabase
                     .from('user_settings')
                     .select('*')
                     .eq('user_id', currentUser.id)
                     .single();
-                
-                if (settings) {
-                    userSettings = settings;
-                } else {
-                    // Criar configurações padrão
-                    await createDefaultSettings();
-                }
-                
-            } catch (error) {
-                console.error('Erro ao carregar dados do usuário:', error);
-            }
+                if (settings) userSettings = settings;
+                else await createDefaultSettings();
+            } catch (error) { console.error('Erro carregar dados:', error); }
         }
 
         async function createDefaultSettings() {
@@ -310,24 +485,15 @@ Posso te ajudar com mais informações? 📞</textarea>
                 user_id: currentUser.id,
                 clinic_name: currentUser.user_metadata?.clinic_name || 'Minha Clínica',
                 whatsapp: '',
-                default_message: 'Olá {nome}! 😊\n\nTudo bem? Aqui é da {clinica} 🦷\n\nVi que você tem interesse em {procedimento}. Que tal agendar uma consulta?\n\nTemos horários disponíveis esta semana e condições especiais para você!\n\nPosso te ajudar com mais informações? 📞',
+                default_message: userSettings.default_message,
                 auto_reminders: false,
                 reminder_days: 2
             };
-            
             try {
-                const { data, error } = await supabase
-                    .from('user_settings')
-                    .insert([defaultSettings])
-                    .select()
-                    .single();
-                
+                const { data, error } = await supabase.from('user_settings').insert([defaultSettings]).select().single();
                 if (error) throw error;
                 userSettings = data;
-                
-            } catch (error) {
-                console.error('Erro ao criar configurações padrão:', error);
-            }
+            } catch (error) { console.error('Erro criar config:', error); }
         }
 
         async function loadLeads() {
@@ -337,22 +503,13 @@ Posso te ajudar com mais informações? 📞</textarea>
                     .select('*')
                     .eq('user_id', currentUser.id)
                     .order('created_at', { ascending: false });
-                
                 if (error) throw error;
-                
                 leads = data || [];
-                console.log('Leads carregados:', leads.length);
-                
-            } catch (error) {
-                console.error('Erro ao carregar leads:', error);
-                leads = [];
-            }
+            } catch (error) { console.error('Erro carregar leads:', error); leads = []; }
         }
 
         function handleFormSubmit(e) {
             e.preventDefault();
-            console.log('Formulário submetido');
-            
             const formData = {
                 name: document.getElementById('patientName').value,
                 phone: document.getElementById('phone').value,
@@ -360,169 +517,89 @@ Posso te ajudar com mais informações? 📞</textarea>
                 status: document.getElementById('status').value,
                 observations: document.getElementById('observations').value
             };
-            
-            if (currentEditId) {
-                updateLead(currentEditId, formData);
-            } else {
-                addLead(formData);
-            }
+            if (currentEditId) updateLead(currentEditId, formData);
+            else addLead(formData);
         }
 
-        async function addLead(formData = null) {
-            let leadData;
-            
-            if (formData) {
-                leadData = formData;
-            } else {
-                const name = document.getElementById('patientName').value;
-                const phone = document.getElementById('phone').value;
-                const procedure = document.getElementById('procedure').value;
-                const status = document.getElementById('status').value || 'novo';
-                const observations = document.getElementById('observations').value;
-                
-                if (!name || !phone || !procedure) {
-                    showAlert('Por favor, preencha os campos obrigatórios!', 'error');
-                    return;
-                }
-                
-                leadData = { name, phone, procedure, status, observations };
+        async function addLead(formData) {
+            if (!formData.name || !formData.phone || !formData.procedure) {
+                showAlert('Preencha os campos obrigatórios!', 'error');
+                return;
             }
-            
             const newLead = {
                 user_id: currentUser.id,
-                name: leadData.name,
-                phone: leadData.phone,
-                procedure: leadData.procedure,
-                status: leadData.status || 'novo',
-                observations: leadData.observations || '',
+                name: formData.name,
+                phone: formData.phone,
+                procedure: formData.procedure,
+                status: formData.status || 'novo',
+                observations: formData.observations || '',
                 created_at: new Date().toISOString()
             };
-            
             try {
-                const { data, error } = await supabase
-                    .from('leads')
-                    .insert([newLead])
-                    .select()
-                    .single();
-                
+                const { data, error } = await supabase.from('leads').insert([newLead]).select().single();
                 if (error) throw error;
-                
                 leads.unshift(data);
                 updateStats();
                 renderLeads();
                 closeModal('addLeadModal');
-                
-                // Limpar formulário
                 document.getElementById('leadForm').reset();
-                
-                showAlert('Lead adicionado com sucesso!', 'success');
-                
-            } catch (error) {
-                console.error('Erro ao adicionar lead:', error);
-                showAlert('Erro ao adicionar lead: ' + error.message, 'error');
-            }
+                showAlert('Lead adicionado!', 'success');
+            } catch (error) { showAlert('Erro: ' + error.message, 'error'); }
         }
 
         async function updateLead(leadId, formData) {
             try {
                 const { data, error } = await supabase
                     .from('leads')
-                    .update({ 
-                        name: formData.name,
-                        phone: formData.phone,
-                        procedure: formData.procedure,
-                        status: formData.status,
-                        observations: formData.observations,
-                        updated_at: new Date().toISOString()
-                    })
+                    .update({ ...formData, updated_at: new Date().toISOString() })
                     .eq('id', leadId)
                     .eq('user_id', currentUser.id)
                     .select()
                     .single();
-                
                 if (error) throw error;
-                
-                // Atualizar no array local
                 const index = leads.findIndex(lead => lead.id === leadId);
-                if (index !== -1) {
-                    leads[index] = data;
-                }
-                
+                if (index !== -1) leads[index] = data;
                 updateStats();
                 renderLeads();
                 closeModal('addLeadModal');
-                
-                // Limpar formulário e reset
                 document.getElementById('leadForm').reset();
                 currentEditId = null;
                 document.getElementById('modalTitle').textContent = 'Adicionar Novo Lead';
-                
-                showAlert('Lead atualizado com sucesso!', 'success');
-                
-            } catch (error) {
-                console.error('Erro ao atualizar lead:', error);
-                showAlert('Erro ao atualizar lead: ' + error.message, 'error');
-            }
+                showAlert('Lead atualizado!', 'success');
+            } catch (error) { showAlert('Erro: ' + error.message, 'error'); }
         }
 
         async function updateLeadStatus(leadId, newStatus) {
             try {
                 const { data, error } = await supabase
                     .from('leads')
-                    .update({ 
-                        status: newStatus,
-                        updated_at: new Date().toISOString()
-                    })
+                    .update({ status: newStatus, updated_at: new Date().toISOString() })
                     .eq('id', leadId)
                     .eq('user_id', currentUser.id)
                     .select()
                     .single();
-                
                 if (error) throw error;
-                
-                // Atualizar no array local
                 const index = leads.findIndex(lead => lead.id === leadId);
-                if (index !== -1) {
-                    leads[index] = data;
-                }
-                
+                if (index !== -1) leads[index] = data;
                 updateStats();
                 renderLeads();
-                showAlert('Status atualizado com sucesso!', 'success');
-                
-            } catch (error) {
-                console.error('Erro ao atualizar status:', error);
-                showAlert('Erro ao atualizar status: ' + error.message, 'error');
-            }
+                showAlert('Status atualizado!', 'success');
+            } catch (error) { showAlert('Erro: ' + error.message, 'error'); }
         }
 
         async function deleteLead(leadId) {
             const lead = leads.find(l => l.id === leadId);
-            if (!lead) return;
-            
-            if (!confirm(`Tem certeza que deseja excluir o lead de ${lead.name}?`)) return;
-            
+            if (!lead || !confirm(`Excluir lead de ${lead.name}?`)) return;
             try {
-                const { error } = await supabase
-                    .from('leads')
-                    .delete()
-                    .eq('id', leadId)
-                    .eq('user_id', currentUser.id);
-                
+                const { error } = await supabase.from('leads').delete().eq('id', leadId).eq('user_id', currentUser.id);
                 if (error) throw error;
-                
                 leads = leads.filter(lead => lead.id !== leadId);
                 updateStats();
                 renderLeads();
-                showAlert('Lead excluído com sucesso!', 'success');
-                
-            } catch (error) {
-                console.error('Erro ao excluir lead:', error);
-                showAlert('Erro ao excluir lead: ' + error.message, 'error');
-            }
+                showAlert('Lead excluído!', 'success');
+            } catch (error) { showAlert('Erro: ' + error.message, 'error'); }
         }
 
-        // Funções de Interface de Dados
         function updateStats() {
             const total = leads.length;
             const novos = leads.filter(lead => lead.status === 'novo').length;
@@ -530,15 +607,11 @@ Posso te ajudar com mais informações? 📞</textarea>
             const compareceu = leads.filter(lead => lead.status === 'compareceu').length;
             const faltou = leads.filter(lead => lead.status === 'faltou').length;
             
-            // Taxa de agendamento: % de leads que foram agendados
             const leadsProcessados = leads.filter(lead => ['agendado', 'compareceu', 'faltou'].includes(lead.status)).length;
             const taxaAgendamento = total > 0 ? Math.round((leadsProcessados / total) * 100) : 0;
-            
-            // Taxa de comparecimento: % dos agendados que compareceram
             const totalConsultas = compareceu + faltou;
             const taxaComparecimento = totalConsultas > 0 ? Math.round((compareceu / totalConsultas) * 100) : 0;
             
-            // Leads deste mês
             const currentMonth = new Date().getMonth();
             const currentYear = new Date().getFullYear();
             const leadsMes = leads.filter(lead => {
@@ -546,7 +619,6 @@ Posso te ajudar com mais informações? 📞</textarea>
                 return leadDate.getMonth() === currentMonth && leadDate.getFullYear() === currentYear;
             }).length;
 
-            // Atualizar elementos na página
             document.getElementById('totalLeads').textContent = total;
             document.getElementById('novosLeads').textContent = novos;
             document.getElementById('agendadosLeads').textContent = agendados;
@@ -555,8 +627,6 @@ Posso te ajudar com mais informações? 📞</textarea>
             document.getElementById('taxaAgendamento').textContent = taxaAgendamento + '%';
             document.getElementById('taxaComparecimento').textContent = taxaComparecimento + '%';
             document.getElementById('leadsMes').textContent = leadsMes;
-            
-            console.log('Stats atualizadas');
         }
 
         function renderLeads(filteredLeads = null) {
@@ -565,19 +635,8 @@ Posso te ajudar com mais informações? 📞</textarea>
             
             if (leadsToRender.length === 0) {
                 let message = 'Clique em "Adicionar Novo Lead" para começar';
-                
-                if (filteredLeads !== null && leads.length > 0) {
-                    message = 'Nenhum lead encontrado com os filtros aplicados';
-                }
-                
-                tbody.innerHTML = `
-                    <tr class="no-leads">
-                        <td colspan="7">
-                            <h3>Nenhum lead encontrado</h3>
-                            <p>${message}</p>
-                        </td>
-                    </tr>
-                `;
+                if (filteredLeads !== null && leads.length > 0) message = 'Nenhum lead encontrado com os filtros aplicados';
+                tbody.innerHTML = `<tr class="no-leads"><td colspan="7"><h3>Nenhum lead encontrado</h3><p>${message}</p></td></tr>`;
                 return;
             }
 
@@ -591,83 +650,134 @@ Posso te ajudar com mais informações? 📞</textarea>
                     <td>${lead.observations || '-'}</td>
                     <td>
                         <div class="actions">
-                            ${lead.status === 'novo' ? `
-                                <button class="btn btn-success" onclick="updateLeadStatus(${lead.id}, 'agendado')" title="Agendar">
-                                    📅
-                                </button>
-                            ` : ''}
-                            <button class="btn btn-info" onclick="sendWhatsApp('${lead.phone}', '${lead.name}', '${lead.procedure}')" title="WhatsApp">
-                                💬
-                            </button>
+                            ${lead.status === 'novo' ? `<button class="btn btn-success" onclick="updateLeadStatus(${lead.id}, 'agendado')" title="Agendar">📅</button>` : ''}
+                            <button class="btn btn-info" onclick="sendWhatsApp('${lead.phone}', '${lead.name}', '${lead.procedure}')" title="WhatsApp">💬</button>
                             ${lead.status === 'agendado' ? `
-                                <button class="btn btn-success" onclick="updateLeadStatus(${lead.id}, 'compareceu')" title="Compareceu">
-                                    ✅
-                                </button>
-                                <button class="btn btn-danger" onclick="updateLeadStatus(${lead.id}, 'faltou')" title="Faltou">
-                                    ❌
-                                </button>
+                                <button class="btn btn-success" onclick="updateLeadStatus(${lead.id}, 'compareceu')" title="Compareceu">✅</button>
+                                <button class="btn btn-danger" onclick="updateLeadStatus(${lead.id}, 'faltou')" title="Faltou">❌</button>
                             ` : ''}
-                            <button class="btn btn-warning" onclick="editLead(${lead.id})" title="Editar">
-                                ✏️
-                            </button>
-                            <button class="btn btn-danger" onclick="deleteLead(${lead.id})" title="Excluir">
-                                🗑️
-                            </button>
+                            <button class="btn btn-warning" onclick="editLead(${lead.id})" title="Editar">✏️</button>
+                            <button class="btn btn-danger" onclick="deleteLead(${lead.id})" title="Excluir">🗑️</button>
                         </div>
                     </td>
                 </tr>
             `).join('');
-            
-            console.log('Leads renderizados:', leadsToRender.length);
         }
 
         function filterLeads() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             const statusFilter = document.getElementById('statusFilter').value;
-            
             let filtered = leads.filter(lead => {
-                const matchesSearch = lead.name.toLowerCase().includes(searchTerm) || 
-                                    lead.phone.includes(searchTerm);
+                const matchesSearch = lead.name.toLowerCase().includes(searchTerm) || lead.phone.includes(searchTerm);
                 const matchesStatus = !statusFilter || lead.status === statusFilter;
                 return matchesSearch && matchesStatus;
             });
-            
-            // Aplicar filtro de período
             filtered = applyPeriodFilter(filtered);
-            
             renderLeads(filtered);
             updateFilteredStats(filtered);
-            console.log('Filtros aplicados, leads encontrados:', filtered.length);
         }
 
         function applyPeriodFilter(leadsArray) {
-            if (currentPeriodFilter === 'all') {
-                return leadsArray;
-            }
-            
+            if (currentPeriodFilter === 'all') return leadsArray;
             const now = new Date();
             let startDate;
-            
             switch(currentPeriodFilter) {
-                case 'today':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    break;
-                case 'week':
-                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    break;
-                case 'month':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                    break;
-                case 'quarter':
-                    startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-                    break;
-                case 'year':
-                    startDate = new Date(now.getFullYear(), 0, 1);
-                    break;
-                default:
-                    return leadsArray;
+                case 'today': startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); break;
+                case 'week': startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
+                case 'month': startDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
+                case 'quarter': startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1); break;
+                default: return leadsArray;
             }
+            return leadsArray.filter(lead => new Date(lead.created_at) >= startDate);
+        }
+
+        function filterByPeriod(period) {
+            currentPeriodFilter = period;
+            document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-period="${period}"]`).classList.add('active');
+            filterLeads();
+        }
+
+        function updateFilteredStats(filteredLeads) {
+            const total = filteredLeads.length;
+            const novos = filteredLeads.filter(lead => lead.status === 'novo').length;
+            const agendados = filteredLeads.filter(lead => lead.status === 'agendado').length;
+            const compareceu = filteredLeads.filter(lead => lead.status === 'compareceu').length;
+            const faltou = filteredLeads.filter(lead => lead.status === 'faltou').length;
             
+            const leadsProcessados = filteredLeads.filter(lead => ['agendado', 'compareceu', 'faltou'].includes(lead.status)).length;
+            const taxaAgendamento = total > 0 ? Math.round((leadsProcessados / total) * 100) : 0;
+            const totalConsultas = compareceu + faltou;
+            const taxaComparecimento = totalConsultas > 0 ? Math.round((compareceu / totalConsultas) * 100) : 0;
+            
+            let leadsPeriodo;
+            if (currentPeriodFilter === 'all') {
+                const currentMonth = new Date().getMonth();
+                const currentYear = new Date().getFullYear();
+                leadsPeriodo = leads.filter(lead => {
+                    const leadDate = new Date(lead.created_at);
+                    return leadDate.getMonth() === currentMonth && leadDate.getFullYear() === currentYear;
+                }).length;
+            } else { leadsPeriodo = total; }
+
+            document.getElementById('totalLeads').textContent = total;
+            document.getElementById('novosLeads').textContent = novos;
+            document.getElementById('agendadosLeads').textContent = agendados;
+            document.getElementById('compareceuLeads').textContent = compareceu;
+            document.getElementById('faltouLeads').textContent = faltou;
+            document.getElementById('taxaAgendamento').textContent = taxaAgendamento + '%';
+            document.getElementById('taxaComparecimento').textContent = taxaComparecimento + '%';
+            document.getElementById('leadsMes').textContent = leadsPeriodo;
+        }
+
+        function sendWhatsApp(phone, name, procedure) {
+            const message = userSettings.default_message
+                .replace('{nome}', name)
+                .replace('{clinica}', userSettings.clinic_name)
+                .replace('{procedimento}', procedure);
+            const cleanPhone = phone.replace(/\D/g, '');
+            const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone;
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappURL = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
+            window.open(whatsappURL, '_blank');
+            showAlert(`WhatsApp aberto para ${name}!`, 'success');
+        }
+
+        function editLead(id) {
+            const lead = leads.find(l => l.id === id);
+            if (!lead) return;
+            currentEditId = id;
+            document.getElementById('modalTitle').textContent = 'Editar Lead';
+            document.getElementById('patientName').value = lead.name;
+            document.getElementById('phone').value = lead.phone;
+            document.getElementById('procedure').value = lead.procedure;
+            document.getElementById('status').value = lead.status;
+            document.getElementById('observations').value = lead.observations || '';
+            document.getElementById('addLeadModal').style.display = 'block';
+        }
+
+        function showReportsModal() { document.getElementById('reportsModal').style.display = 'block'; }
+
+        function generateReport(period) {
+            const reportContainer = document.getElementById('reportResults');
+            reportContainer.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            setTimeout(() => {
+                const filteredLeads = filterLeadsByPeriod(leads, period);
+                displayReport(filteredLeads, period);
+            }, 800);
+        }
+
+        function filterLeadsByPeriod(leadsArray, period) {
+            if (period === 'all') return leadsArray;
+            const now = new Date();
+            let startDate;
+            switch(period) {
+                case 'week': startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
+                case 'month': startDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
+                case 'quarter': startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1); break;
+                case 'year': startDate = new Date(now.getFullYear(), 0, 1); break;
+                default: return leadsArray;
+            }
             return leadsArray.filter(lead => new Date(lead.created_at) >= startDate);
         }
 
@@ -683,153 +793,72 @@ Posso te ajudar com mais informações? 📞</textarea>
                 ((compareceu / (agendado + compareceu + faltou)) * 100).toFixed(1) : 0;
             const taxaConversao = total > 0 ? (((agendado + compareceu) / total) * 100).toFixed(1) : 0;
             
-            // Análise por procedimento
             const procedimentos = {};
             filteredLeads.forEach(lead => {
-                if (!procedimentos[lead.procedure]) {
-                    procedimentos[lead.procedure] = { total: 0, agendados: 0 };
-                }
+                if (!procedimentos[lead.procedure]) procedimentos[lead.procedure] = { total: 0, agendados: 0 };
                 procedimentos[lead.procedure].total++;
-                if (['agendado', 'compareceu'].includes(lead.status)) {
-                    procedimentos[lead.procedure].agendados++;
-                }
+                if (['agendado', 'compareceu'].includes(lead.status)) procedimentos[lead.procedure].agendados++;
             });
             
-            // Ordenar procedimentos por quantidade
-            const procedimentosOrdenados = Object.entries(procedimentos)
-                .sort((a, b) => b[1].total - a[1].total)
-                .slice(0, 5);
-            
-            // Gerar insights
+            const procedimentosOrdenados = Object.entries(procedimentos).sort((a, b) => b[1].total - a[1].total).slice(0, 5);
             const insights = generateInsights(filteredLeads, taxaAgendamento, taxaComparecimento, procedimentosOrdenados);
             
             const reportHTML = `
                 <div style="background: #f8f9fa; padding: 25px; border-radius: 10px;">
                     <h3 style="margin-bottom: 20px; color: #2c3e50;">📊 Relatório: ${getPeriodName(period)}</h3>
-                    
                     <div class="reports-grid">
-                        <div class="report-card">
-                            <div class="report-number">${total}</div>
-                            <div class="report-label">Total de Leads</div>
-                        </div>
-                        <div class="report-card">
-                            <div class="report-number">${taxaAgendamento}%</div>
-                            <div class="report-label">Taxa de Agendamento</div>
-                        </div>
-                        <div class="report-card">
-                            <div class="report-number">${taxaComparecimento}%</div>
-                            <div class="report-label">Taxa de Comparecimento</div>
-                        </div>
-                        <div class="report-card">
-                            <div class="report-number">${taxaConversao}%</div>
-                            <div class="report-label">Taxa de Conversão</div>
-                        </div>
+                        <div class="report-card"><div class="report-number">${total}</div><div class="report-label">Total de Leads</div></div>
+                        <div class="report-card"><div class="report-number">${taxaAgendamento}%</div><div class="report-label">Taxa de Agendamento</div></div>
+                        <div class="report-card"><div class="report-number">${taxaComparecimento}%</div><div class="report-label">Taxa de Comparecimento</div></div>
+                        <div class="report-card"><div class="report-number">${taxaConversao}%</div><div class="report-label">Taxa de Conversão</div></div>
                     </div>
-                    
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px;">
-                        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; text-align: center;">
-                            <strong>${novo}</strong><br>Novos
-                        </div>
-                        <div style="background: #d4edda; padding: 15px; border-radius: 8px; text-align: center;">
-                            <strong>${agendado}</strong><br>Agendados
-                        </div>
-                        <div style="background: #d1e7dd; padding: 15px; border-radius: 8px; text-align: center;">
-                            <strong>${compareceu}</strong><br>Compareceram
-                        </div>
-                        <div style="background: #f8d7da; padding: 15px; border-radius: 8px; text-align: center;">
-                            <strong>${faltou}</strong><br>Faltaram
-                        </div>
+                        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; text-align: center;"><strong>${novo}</strong><br>Novos</div>
+                        <div style="background: #d4edda; padding: 15px; border-radius: 8px; text-align: center;"><strong>${agendado}</strong><br>Agendados</div>
+                        <div style="background: #d1e7dd; padding: 15px; border-radius: 8px; text-align: center;"><strong>${compareceu}</strong><br>Compareceram</div>
+                        <div style="background: #f8d7da; padding: 15px; border-radius: 8px; text-align: center;"><strong>${faltou}</strong><br>Faltaram</div>
                     </div>
-                    
                     ${procedimentosOrdenados.length > 0 ? `
                         <div class="chart-container">
                             <h4 style="margin-bottom: 15px; color: #2c3e50;">📋 Procedimentos Mais Procurados</h4>
                             ${procedimentosOrdenados.map(([proc, data]) => {
                                 const percentage = total > 0 ? (data.total / total) * 100 : 0;
-                                return `
-                                    <div class="chart-bar">
-                                        <div class="chart-label">${proc}</div>
-                                        <div class="chart-progress">
-                                            <div class="chart-fill" style="width: ${percentage}%"></div>
-                                        </div>
-                                        <div class="chart-value">${data.total}</div>
-                                    </div>
-                                `;
+                                return `<div class="chart-bar"><div class="chart-label">${proc}</div><div class="chart-progress"><div class="chart-fill" style="width: ${percentage}%"></div></div><div class="chart-value">${data.total}</div></div>`;
                             }).join('')}
                         </div>
                     ` : ''}
-                    
                     <div class="insights-container">
                         <h4>💡 Insights e Recomendações</h4>
-                        <ul class="insights-list">
-                            ${insights.map(insight => `<li>${insight}</li>`).join('')}
-                        </ul>
+                        <ul class="insights-list">${insights.map(insight => `<li>${insight}</li>`).join('')}</ul>
                     </div>
                 </div>
             `;
-            
             document.getElementById('reportResults').innerHTML = reportHTML;
         }
 
         function generateInsights(leads, taxaAgendamento, taxaComparecimento, procedimentosOrdenados) {
             const insights = [];
-            
-            if (parseFloat(taxaAgendamento) < 30) {
-                insights.push('Taxa de agendamento baixa. Considere melhorar o follow-up dos leads.');
-            } else if (parseFloat(taxaAgendamento) > 70) {
-                insights.push('Excelente taxa de agendamento! Continue com a estratégia atual.');
-            }
-            
-            if (parseFloat(taxaComparecimento) < 60) {
-                insights.push('Taxa de comparecimento pode melhorar. Considere enviar lembretes via WhatsApp.');
-            } else if (parseFloat(taxaComparecimento) > 85) {
-                insights.push('Ótima taxa de comparecimento! Seus pacientes são bem engajados.');
-            }
-            
+            if (parseFloat(taxaAgendamento) < 30) insights.push('Taxa de agendamento baixa. Considere melhorar o follow-up dos leads.');
+            else if (parseFloat(taxaAgendamento) > 70) insights.push('Excelente taxa de agendamento! Continue com a estratégia atual.');
+            if (parseFloat(taxaComparecimento) < 60) insights.push('Taxa de comparecimento pode melhorar. Considere enviar lembretes via WhatsApp.');
+            else if (parseFloat(taxaComparecimento) > 85) insights.push('Ótima taxa de comparecimento! Seus pacientes são bem engajados.');
             if (procedimentosOrdenados.length > 0) {
                 const topProcedimento = procedimentosOrdenados[0];
                 insights.push(`Procedimento mais procurado: ${topProcedimento[0]} (${topProcedimento[1].total} leads).`);
             }
-            
-            if (leads.length > 0) {
-                const leadsRecentes = leads.filter(lead => {
-                    const leadDate = new Date(lead.created_at);
-                    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-                    return leadDate >= weekAgo;
-                }).length;
-                
-                if (leadsRecentes === 0) {
-                    insights.push('Nenhum lead novo na última semana. Considere intensificar o marketing.');
-                } else if (leadsRecentes > 10) {
-                    insights.push('Muitos leads novos! Certifique-se de ter capacidade para atender todos.');
-                }
-            }
-            
-            if (insights.length === 0) {
-                insights.push('Continue monitorando os indicadores para identificar oportunidades de melhoria.');
-            }
-            
+            if (insights.length === 0) insights.push('Continue monitorando os indicadores para identificar oportunidades de melhoria.');
             return insights;
         }
 
         function getPeriodName(period) {
-            const periodMap = {
-                'week': 'Esta Semana',
-                'month': 'Este Mês',
-                'quarter': 'Este Trimestre',
-                'year': 'Este Ano',
-                'all': 'Todos os Períodos'
-            };
+            const periodMap = { 'week': 'Esta Semana', 'month': 'Este Mês', 'quarter': 'Este Trimestre', 'year': 'Este Ano', 'all': 'Todos os Períodos' };
             return periodMap[period] || period;
         }
 
-        // Funções de Configurações
         function showSettingsModal() {
-            // Carregar valores atuais
             document.getElementById('clinicName').value = userSettings.clinic_name || '';
             document.getElementById('clinicWhatsapp').value = userSettings.whatsapp || '';
             document.getElementById('defaultMessage').value = userSettings.default_message || '';
-            
             document.getElementById('settingsModal').style.display = 'block';
         }
 
@@ -837,41 +866,21 @@ Posso te ajudar com mais informações? 📞</textarea>
             const clinicName = document.getElementById('clinicName').value;
             const clinicWhatsapp = document.getElementById('clinicWhatsapp').value;
             const defaultMessage = document.getElementById('defaultMessage').value;
-            
-            const updatedSettings = {
-                clinic_name: clinicName,
-                whatsapp: clinicWhatsapp,
-                default_message: defaultMessage,
-                updated_at: new Date().toISOString()
-            };
-            
+            const updatedSettings = { clinic_name: clinicName, whatsapp: clinicWhatsapp, default_message: defaultMessage, updated_at: new Date().toISOString() };
             try {
-                const { data, error } = await supabase
-                    .from('user_settings')
-                    .update(updatedSettings)
-                    .eq('user_id', currentUser.id)
-                    .select()
-                    .single();
-                
+                const { data, error } = await supabase.from('user_settings').update(updatedSettings).eq('user_id', currentUser.id).select().single();
                 if (error) throw error;
-                
                 userSettings = { ...userSettings, ...data };
                 closeModal('settingsModal');
-                showAlert('Configurações salvas com sucesso!', 'success');
-                
-            } catch (error) {
-                console.error('Erro ao salvar configurações:', error);
-                showAlert('Erro ao salvar configurações: ' + error.message, 'error');
-            }
+                showAlert('Configurações salvas!', 'success');
+            } catch (error) { showAlert('Erro: ' + error.message, 'error'); }
         }
 
-        // Funções Auxiliares
         function openAddLeadModal() {
             currentEditId = null;
             document.getElementById('modalTitle').textContent = 'Adicionar Novo Lead';
             document.getElementById('leadForm').reset();
             document.getElementById('addLeadModal').style.display = 'block';
-            console.log('Modal de adicionar aberto');
         }
 
         function closeModal(modalId) {
@@ -883,90 +892,43 @@ Posso te ajudar com mais informações? 📞</textarea>
         }
 
         function refreshSystem() {
-            console.log('🔄 Iniciando atualização do sistema...');
-            
-            // Mostrar feedback visual
             const refreshBtn = document.querySelector('.btn-success');
             const originalText = refreshBtn.innerHTML;
             refreshBtn.innerHTML = '⏳ Atualizando...';
             refreshBtn.disabled = true;
-            refreshBtn.style.opacity = '0.7';
-            
-            // Simular carregamento e atualizar dados
             setTimeout(async () => {
                 try {
-                    // Recarregar dados
                     await loadLeads();
                     await loadUserData();
-                    
-                    // Resetar filtros
                     document.getElementById('searchInput').value = '';
                     document.getElementById('statusFilter').value = '';
                     filterByPeriod('all');
-                    
-                    // Renderizar tudo novamente
                     updateStats();
                     renderLeads();
-                    
-                    console.log('✅ Sistema atualizado com sucesso');
-                    showAlert('✅ Sistema atualizado com sucesso!', 'success');
-                    
-                } catch (error) {
-                    console.error('❌ Erro durante atualização:', error);
-                    showAlert('❌ Erro ao atualizar sistema!', 'error');
-                } finally {
-                    // Restaurar botão
-                    refreshBtn.innerHTML = originalText;
-                    refreshBtn.disabled = false;
-                    refreshBtn.style.opacity = '1';
-                }
+                    showAlert('Sistema atualizado!', 'success');
+                } catch (error) { showAlert('Erro ao atualizar!', 'error'); }
+                finally { refreshBtn.innerHTML = originalText; refreshBtn.disabled = false; }
             }, 800);
         }
 
         function showAlert(message, type) {
-            // Remover alertas existentes
             const existingAlerts = document.querySelectorAll('.alert');
             existingAlerts.forEach(alert => alert.remove());
-            
-            // Criar novo alerta
             const alert = document.createElement('div');
             alert.className = `alert alert-${type}`;
             alert.textContent = message;
-            
-            // Inserir no topo da página
             const container = document.querySelector('.auth-card') || document.querySelector('.container');
-            if (container) {
-                container.insertBefore(alert, container.firstChild);
-                
-                // Auto-scroll para o topo se necessário
-                if (document.querySelector('.container')) {
-                    container.scrollTop = 0;
-                }
-            }
-            
-            // Remover após 5 segundos
-            setTimeout(() => {
-                if (alert.parentNode) {
-                    alert.remove();
-                }
-            }, 5000);
+            if (container) container.insertBefore(alert, container.firstChild);
+            setTimeout(() => { if (alert.parentNode) alert.remove(); }, 5000);
         }
 
-        function formatDate(dateString) {
-            return new Date(dateString).toLocaleDateString('pt-BR');
-        }
-
+        function formatDate(dateString) { return new Date(dateString).toLocaleDateString('pt-BR'); }
         function getStatusText(status) {
-            const statusMap = {
-                'novo': 'Novo',
-                'agendado': 'Agendado',
-                'compareceu': 'Compareceu',
-                'faltou': 'Faltou'
-            };
+            const statusMap = { 'novo': 'Novo', 'agendado': 'Agendado', 'compareceu': 'Compareceu', 'faltou': 'Faltou' };
             return statusMap[status] || status;
         }
 
-        // Tornar funções globais para uso nos botões
+        // Global functions
         window.filterByPeriod = filterByPeriod;
         window.updateLeadStatus = updateLeadStatus;
         window.sendWhatsApp = sendWhatsApp;
@@ -985,1122 +947,6 @@ Posso te ajudar com mais informações? 📞</textarea>
         window.handleRegister = handleRegister;
         window.loginWithGoogle = loginWithGoogle;
         window.logout = logout;
-
-        console.log('✅ Flash Leads SaaS carregado com sucesso!');
     </script>
 </body>
 </html>
-                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                    break;
-                case 'quarter':
-                    startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-                    break;
-                default:
-                    return leadsArray;
-            }
-            
-            return leadsArray.filter(lead => new Date(lead.created_at) >= startDate);
-        }
-
-        function filterByPeriod(period) {
-            currentPeriodFilter = period;
-            
-            // Atualizar botões ativos
-            document.querySelectorAll('.period-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelector(`[data-period="${period}"]`).classList.add('active');
-            
-            filterLeads();
-            console.log('Filtro de período aplicado:', period);
-        }
-
-        function updateFilteredStats(filteredLeads) {
-            const total = filteredLeads.length;
-            const novos = filteredLeads.filter(lead => lead.status === 'novo').length;
-            const agendados = filteredLeads.filter(lead => lead.status === 'agendado').length;
-            const compareceu = filteredLeads.filter(lead => lead.status === 'compareceu').length;
-            const faltou = filteredLeads.filter(lead => lead.status === 'faltou').length;
-            
-            const leadsProcessados = filteredLeads.filter(lead => ['agendado', 'compareceu', 'faltou'].includes(lead.status)).length;
-            const taxaAgendamento = total > 0 ? Math.round((leadsProcessados / total) * 100) : 0;
-            
-            const totalConsultas = compareceu + faltou;
-            const taxaComparecimento = totalConsultas > 0 ? Math.round((compareceu / totalConsultas) * 100) : 0;
-            
-            let leadsPeriodo;
-            if (currentPeriodFilter === 'all') {
-                const currentMonth = new Date().getMonth();
-                const currentYear = new Date().getFullYear();
-                leadsPeriodo = leads.filter(lead => {
-                    const leadDate = new Date(lead.created_at);
-                    return leadDate.getMonth() === currentMonth && leadDate.getFullYear() === currentYear;
-                }).length;
-            } else {
-                leadsPeriodo = total;
-            }
-
-            document.getElementById('totalLeads').textContent = total;
-            document.getElementById('novosLeads').textContent = novos;
-            document.getElementById('agendadosLeads').textContent = agendados;
-            document.getElementById('compareceuLeads').textContent = compareceu;
-            document.getElementById('faltouLeads').textContent = faltou;
-            document.getElementById('taxaAgendamento').textContent = taxaAgendamento + '%';
-            document.getElementById('taxaComparecimento').textContent = taxaComparecimento + '%';
-            document.getElementById('leadsMes').textContent = leadsPeriodo;
-        }
-
-        function sendWhatsApp(phone, name, procedure) {
-            const message = userSettings.default_message
-                .replace('{nome}', name)
-                .replace('{clinica}', userSettings.clinic_name)
-                .replace('{procedimento}', procedure);
-            
-            const cleanPhone = phone.replace(/\D/g, '');
-            const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone;
-            const encodedMessage = encodeURIComponent(message);
-            const whatsappURL = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
-            
-            window.open(whatsappURL, '_blank');
-            
-            showAlert(`✅ WhatsApp aberto para ${name}!`, 'success');
-        }
-
-        function editLead(id) {
-            const lead = leads.find(l => l.id === id);
-            if (!lead) {
-                console.error('Lead não encontrado:', id);
-                return;
-            }
-            
-            currentEditId = id;
-            document.getElementById('modalTitle').textContent = 'Editar Lead';
-            document.getElementById('patientName').value = lead.name;
-            document.getElementById('phone').value = lead.phone;
-            document.getElementById('procedure').value = lead.procedure;
-            document.getElementById('status').value = lead.status;
-            document.getElementById('observations').value = lead.observations || '';
-            
-            document.getElementById('addLeadModal').style.display = 'block';
-            console.log('Modal de edição aberto para lead:', id);
-        }
-
-        // Funções de Relatórios
-        function showReportsModal() {
-            document.getElementById('reportsModal').style.display = 'block';
-        }
-
-        function generateReport(period) {
-            const reportContainer = document.getElementById('reportResults');
-            reportContainer.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-            
-            // Simular carregamento
-            setTimeout(() => {
-                const filteredLeads = filterLeadsByPeriod(leads, period);
-                displayReport(filteredLeads, period);
-            }, 800);
-        }
-
-        function filterLeadsByPeriod(leadsArray, period) {
-            if (period === 'all') return leadsArray;
-            
-            const now = new Date();
-            let startDate;
-            
-            switch(period) {
-                case 'week':
-                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    break;
-                case 'month':<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flash Leads SaaS - Gestão de Leads Profissional</title>
-    
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        /* Auth Screens */
-        .auth-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .auth-card {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .auth-card h1 {
-            color: #2c3e50;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-        }
-
-        .auth-card p {
-            color: #7f8c8d;
-            margin-bottom: 30px;
-            font-size: 1.1em;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #2c3e50;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #3498db;
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: #f8f9fa;
-            color: #2c3e50;
-            border: 2px solid #e9ecef;
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #27ae60, #229954);
-            color: white;
-            font-size: 14px;
-            padding: 8px 16px;
-        }
-
-        .btn-info {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-            font-size: 14px;
-            padding: 8px 16px;
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, #f39c12, #e67e22);
-            color: white;
-            font-size: 14px;
-            padding: 8px 16px;
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            color: white;
-            font-size: 14px;
-            padding: 8px 16px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .auth-switch {
-            margin-top: 20px;
-            color: #7f8c8d;
-        }
-
-        .auth-switch a {
-            color: #3498db;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .auth-switch a:hover {
-            text-decoration: underline;
-        }
-
-        /* Main App Container */
-        .container {
-            display: none;
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-            color: white;
-            padding: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            font-weight: 300;
-        }
-
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-        }
-
-        .controls {
-            padding: 30px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .controls-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .search-container {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .search-input {
-            padding: 12px 16px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            width: 250px;
-            transition: border-color 0.3s ease;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #3498db;
-        }
-
-        .status-filter {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .status-filter select {
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .stat-number {
-            font-size: 2em;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
-        .stat-label {
-            font-size: 0.9em;
-            color: #7f8c8d;
-            margin-top: 5px;
-        }
-
-        .period-filter {
-            margin-bottom: 15px;
-        }
-
-        .period-btn {
-            font-size: 14px;
-            padding: 8px 16px;
-            transition: all 0.3s ease;
-        }
-
-        .period-btn.active {
-            background: linear-gradient(135deg, #27ae60, #229954);
-            color: white;
-            transform: translateY(-1px);
-            box-shadow: 0 3px 10px rgba(39, 174, 96, 0.3);
-        }
-
-        .period-btn:not(.active):hover {
-            background: linear-gradient(135deg, #74b9ff, #0984e3);
-        }
-
-        .table-container {
-            padding: 30px;
-            overflow-x: auto;
-        }
-
-        .leads-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .leads-table th {
-            background: linear-gradient(135deg, #34495e, #2c3e50);
-            color: white;
-            padding: 15px;
-            text-align: left;
-            font-weight: 500;
-        }
-
-        .leads-table td {
-            padding: 15px;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .leads-table tr:hover {
-            background: #f8f9fa;
-        }
-
-        .status-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .status-novo {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .status-agendado {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-compareceu {
-            background: #d1e7dd;
-            color: #0a3622;
-        }
-
-        .status-faltou {
-            background: #f8d7da;
-            color: #58151c;
-        }
-
-        .actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-        }
-
-        .modal-content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #e9ecef;
-            padding-bottom: 15px;
-        }
-
-        .modal-header h3 {
-            color: #2c3e50;
-            font-size: 1.5em;
-        }
-
-        .close {
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            color: #999;
-            transition: color 0.3s;
-        }
-
-        .close:hover {
-            color: #333;
-        }
-
-        .no-leads {
-            text-align: center;
-            padding: 40px;
-            color: #7f8c8d;
-        }
-
-        .no-leads h3 {
-            margin-bottom: 10px;
-        }
-
-        /* Loading Spinner */
-        .loading {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 40px;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Reports Modal Styles */
-        .reports-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .report-card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            text-align: center;
-            border-left: 4px solid #3498db;
-        }
-
-        .report-number {
-            font-size: 2em;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-
-        .report-label {
-            color: #7f8c8d;
-            font-size: 0.9em;
-        }
-
-        .chart-container {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-
-        .chart-bar {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            gap: 10px;
-        }
-
-        .chart-label {
-            min-width: 120px;
-            font-size: 14px;
-            color: #2c3e50;
-        }
-
-        .chart-progress {
-            flex: 1;
-            height: 20px;
-            background: #ecf0f1;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .chart-fill {
-            height: 100%;
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            border-radius: 10px;
-            transition: width 0.3s ease;
-        }
-
-        .chart-value {
-            min-width: 40px;
-            font-weight: bold;
-            color: #2c3e50;
-            font-size: 14px;
-        }
-
-        .insights-container {
-            background: #e8f5e8;
-            padding: 20px;
-            border-radius: 10px;
-            border-left: 4px solid #27ae60;
-        }
-
-        .insights-container h4 {
-            color: #27ae60;
-            margin-bottom: 15px;
-        }
-
-        .insights-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        .insights-list li {
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(39, 174, 96, 0.1);
-            color: #2c3e50;
-        }
-
-        .insights-list li:before {
-            content: "💡 ";
-            margin-right: 8px;
-        }
-
-        /* Responsividade */
-        @media (max-width: 1024px) {
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .stats {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 12px;
-            }
-            
-            .search-input {
-                width: 200px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-
-            .header {
-                padding: 20px;
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
-
-            .header h1 {
-                font-size: 1.8em;
-            }
-
-            .header p {
-                font-size: 1em;
-            }
-
-            .controls {
-                padding: 20px;
-            }
-
-            .controls-top {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 15px;
-            }
-
-            .search-container {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .search-input {
-                width: 100%;
-            }
-
-            .status-filter {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 8px;
-            }
-
-            .stats {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 10px;
-            }
-
-            .stat-card {
-                padding: 15px;
-            }
-
-            .stat-number {
-                font-size: 1.5em;
-            }
-
-            .table-container {
-                padding: 15px;
-                overflow-x: auto;
-            }
-
-            .leads-table {
-                font-size: 14px;
-                min-width: 700px;
-            }
-
-            .leads-table th,
-            .leads-table td {
-                padding: 12px 8px;
-            }
-
-            .actions {
-                flex-direction: column;
-                gap: 4px;
-                min-width: 60px;
-            }
-
-            .modal-content {
-                width: 95%;
-                margin: 10px;
-                padding: 20px;
-            }
-
-            .btn {
-                padding: 14px 20px;
-                font-size: 16px;
-            }
-
-            .period-filter {
-                text-align: center;
-            }
-
-            .period-filter > div {
-                justify-content: center;
-            }
-
-            .reports-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .chart-label {
-                min-width: 80px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            body {
-                padding: 5px;
-            }
-
-            .stats {
-                grid-template-columns: 1fr;
-            }
-
-            .header h1 {
-                font-size: 1.5em;
-            }
-
-            .header {
-                padding: 15px;
-            }
-
-            .controls {
-                padding: 15px;
-            }
-
-            .table-container {
-                padding: 10px;
-            }
-
-            .leads-table {
-                min-width: 600px;
-                font-size: 12px;
-            }
-
-            .btn {
-                padding: 12px 16px;
-                font-size: 14px;
-            }
-
-            .reports-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Tablet Portrait */
-        @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
-            .stats {
-                grid-template-columns: repeat(4, 1fr);
-            }
-            
-            .controls-top {
-                flex-direction: row;
-                flex-wrap: wrap;
-                justify-content: space-between;
-            }
-            
-            .search-container {
-                flex: 1;
-                min-width: 300px;
-            }
-        }
-
-        /* Tablet Landscape */
-        @media (min-width: 1024px) and (max-width: 1200px) and (orientation: landscape) {
-            .stats {
-                grid-template-columns: repeat(4, 1fr);
-            }
-            
-            .header {
-                flex-direction: row;
-            }
-        }
-
-        /* Alert Messages */
-        .alert {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-    </style>
-</head>
-<body>
-    <!-- Authentication Screen -->
-    <div id="authScreen" class="auth-container">
-        <div class="auth-card">
-            <h1>⚡ Flash Leads</h1>
-            <p>Sistema Profissional de Gestão de Leads</p>
-            
-            <!-- Login Form -->
-            <div id="loginForm">
-                <div class="form-group">
-                    <label for="loginEmail">Email</label>
-                    <input type="email" id="loginEmail" placeholder="seu@email.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="loginPassword">Senha</label>
-                    <input type="password" id="loginPassword" placeholder="••••••••" required>
-                </div>
-                <button class="btn btn-primary" onclick="handleLogin()" style="width: 100%; margin-bottom: 15px;">
-                    Entrar
-                </button>
-                <button class="btn btn-secondary" onclick="loginWithGoogle()" style="width: 100%; margin-bottom: 15px;">
-                    🔍 Entrar com Google
-                </button>
-                <div class="auth-switch">
-                    Não tem conta? <a href="#" onclick="showRegister()">Criar conta</a>
-                </div>
-            </div>
-
-            <!-- Register Form -->
-            <div id="registerForm" style="display: none;">
-                <div class="form-group">
-                    <label for="registerName">Nome Completo</label>
-                    <input type="text" id="registerName" placeholder="Seu nome" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerEmail">Email</label>
-                    <input type="email" id="registerEmail" placeholder="seu@email.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerPassword">Senha</label>
-                    <input type="password" id="registerPassword" placeholder="••••••••" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerClinic">Nome da Clínica</label>
-                    <input type="text" id="registerClinic" placeholder="Sua clínica" required>
-                </div>
-                <button class="btn btn-primary" onclick="handleRegister()" style="width: 100%; margin-bottom: 15px;">
-                    Criar Conta
-                </button>
-                <div class="auth-switch">
-                    Já tem conta? <a href="#" onclick="showLogin()">Fazer login</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Application -->
-    <div id="mainApp" class="container">
-        <div class="header">
-            <div class="header-left">
-                <div>
-                    <h1>⚡ Flash Leads</h1>
-                    <p>Sistema Inteligente de Gestão de Leads Odontológicos</p>
-                </div>
-            </div>
-            <div class="user-info">
-                <div class="user-avatar" id="userAvatar">U</div>
-                <span id="userName">Usuário</span>
-                <button class="btn btn-secondary" onclick="logout()" style="margin-left: 15px; padding: 8px 16px; width: auto;">
-                    Sair
-                </button>
-            </div>
-        </div>
-
-        <div class="controls">
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-number" id="totalLeads">0</div>
-                    <div class="stat-label">Total de Leads</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="novosLeads">0</div>
-                    <div class="stat-label">Leads Novos</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="agendadosLeads">0</div>
-                    <div class="stat-label">Agendados</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="compareceuLeads">0</div>
-                    <div class="stat-label">Compareceram</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="faltouLeads">0</div>
-                    <div class="stat-label">Faltaram</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="leadsMes">0</div>
-                    <div class="stat-label">Leads Este Mês</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="taxaAgendamento">0%</div>
-                    <div class="stat-label">Taxa de Agendamento</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="taxaComparecimento">0%</div>
-                    <div class="stat-label">Taxa de Comparecimento</div>
-                </div>
-            </div>
-
-            <div class="controls-top">
-                <div class="search-container">
-                    <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar por nome ou telefone...">
-                    <div class="status-filter">
-                        <label>Filtrar por status:</label>
-                        <select id="statusFilter">
-                            <option value="">Todos os status</option>
-                            <option value="novo">Novo</option>
-                            <option value="agendado">Agendado</option>
-                            <option value="compareceu">Compareceu</option>
-                            <option value="faltou">Faltou</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="period-filter">
-                    <label><strong>Filtrar por período:</strong></label>
-                    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center;">
-                        <button class="btn btn-info period-btn active" data-period="all" onclick="filterByPeriod('all')">
-                            Todos
-                        </button>
-                        <button class="btn btn-info period-btn" data-period="today" onclick="filterByPeriod('today')">
-                            Hoje
-                        </button>
-                        <button class="btn btn-info period-btn" data-period="week" onclick="filterByPeriod('week')">
-                            Esta Semana
-                        </button>
-                        <button class="btn btn-info period-btn" data-period="month" onclick="filterByPeriod('month')">
-                            Este Mês
-                        </button>
-                        <button class="btn btn-info period-btn" data-period="quarter" onclick="filterByPeriod('quarter')">
-                            Trimestre
-                        </button>
-                    </div>
-                </div>
-                
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn btn-primary" onclick="openAddLeadModal()">
-                        ➕ Adicionar Novo Lead
-                    </button>
-                    <button class="btn btn-info" onclick="showSettingsModal()">
-                        ⚙️ Configurações
-                    </button>
-                    <button class="btn btn-warning" onclick="showReportsModal()">
-                        📊 Relatórios
-                    </button>
-                    <button class="btn btn-success" onclick="refreshSystem()">
-                        🔄 Atualizar
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div class="table-container">
-            <table class="leads-table">
-                <thead>
-                    <tr>
-                        <th>Nome do Paciente</th>
-                        <th>Telefone</th>
-                        <th>Procedimento</th>
-                        <th>Data de Entrada</th>
-                        <th>Status</th>
-                        <th>Observações</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="leadsTableBody">
-                    <tr class="no-leads">
-                        <td colspan="7">
-                            <div class="loading">
-                                <div class="spinner"></div>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Add Lead Modal -->
-    <div id="addLeadModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">Adicionar Novo Lead</h3>
-                <span class="close" onclick="closeModal('addLeadModal')">&times;</span>
-            </div>
-            <form id="leadForm">
-                <div class="form-group">
-                    <label for="patientName">Nome do Paciente *</label>
-                    <input type="text" id="patientName" required>
-                </div>
-                <div class="form-group">
-                    <label for="phone">Telefone *</label>
-                    <input type="tel" id="phone" required>
-                </div>
-                <div class="form-group">
-                    <label for="procedure">Procedimento Desejado *</label>
-                    <select id="procedure" required>
-                        <option value="">Selecione o procedimento</option>
-                        <option value="Limpeza/Profilaxia">Limpeza/Profilaxia</option>
-                        <option value="Clareamento">Clareamento</option>
-                        <option value="Implante">Implante</option>
-                        <option value="Ortodontia">Ortodontia</option>
-                        <option value="Prótese">Prótese</option>
-                        <option value="En
