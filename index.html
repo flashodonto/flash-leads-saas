@@ -22,6 +22,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            padding: 10px;
         }
 
         /* Auth Screens */
@@ -162,13 +163,12 @@
         /* Main App Container */
         .container {
             display: none;
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
             border-radius: 15px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             overflow: hidden;
-            margin: 20px;
         }
 
         .header {
@@ -535,8 +535,11 @@
 
         /* Responsividade */
         @media (max-width: 768px) {
+            body {
+                padding: 5px;
+            }
+
             .container {
-                margin: 10px;
                 border-radius: 10px;
             }
 
@@ -587,7 +590,7 @@
 
             .leads-table {
                 font-size: 14px;
-                min-width: 800px;
+                min-width: 700px;
             }
 
             .leads-table th,
