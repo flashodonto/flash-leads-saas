@@ -6,106 +6,489 @@
     <title>Flash Leads SaaS - Gestão de Leads Profissional</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-        .auth-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-        .auth-card { background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        .auth-card h1 { color: #2c3e50; margin-bottom: 10px; font-size: 2.5em; }
-        .auth-card p { color: #7f8c8d; margin-bottom: 30px; font-size: 1.1em; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-        .form-group { margin-bottom: 20px; text-align: left; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #2c3e50; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; transition: border-color 0.3s ease; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #3498db; }
-        .form-group textarea { resize: vertical; min-height: 80px; }
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: all 0.3s ease; font-weight: 500; }
-        .btn-primary { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
-        .btn-secondary { background: #f8f9fa; color: #2c3e50; border: 2px solid #e9ecef; }
-        .btn-success { background: linear-gradient(135deg, #27ae60, #229954); color: white; font-size: 14px; padding: 8px 16px; }
-        .btn-info { background: linear-gradient(135deg, #3498db, #2980b9); color: white; font-size: 14px; padding: 8px 16px; }
-        .btn-warning { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; font-size: 14px; padding: 8px 16px; }
-        .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; font-size: 14px; padding: 8px 16px; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .auth-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
 
-        .auth-switch { margin-top: 20px; color: #7f8c8d; }
-        .auth-switch a { color: #3498db; text-decoration: none; font-weight: 600; }
-        .auth-switch a:hover { text-decoration: underline; }
+        .auth-card h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
 
-        .container { display: none; max-width: 1200px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); color: white; padding: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-        .header h1 { font-size: 2.5em; margin-bottom: 10px; font-weight: 300; }
-        .header p { font-size: 1.1em; opacity: 0.9; }
-        .user-info { display: flex; align-items: center; gap: 15px; }
-        .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .auth-card p {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
 
-        .controls { padding: 30px; background: #f8f9fa; border-bottom: 1px solid #e9ecef; }
-        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .stat-card { background: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .stat-number { font-size: 2em; font-weight: bold; color: #2c3e50; }
-        .stat-label { font-size: 0.9em; color: #7f8c8d; margin-top: 5px; }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
 
-        .controls-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
-        .search-container { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        .search-input { padding: 12px 16px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; width: 250px; transition: border-color 0.3s ease; }
-        .search-input:focus { outline: none; border-color: #3498db; }
-        .status-filter { display: flex; gap: 10px; align-items: center; }
-        .status-filter select { padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
 
-        .period-filter { margin-bottom: 15px; }
-        .period-btn { font-size: 14px; padding: 8px 16px; transition: all 0.3s ease; }
-        .period-btn.active { background: linear-gradient(135deg, #27ae60, #229954); color: white; transform: translateY(-1px); box-shadow: 0 3px 10px rgba(39, 174, 96, 0.3); }
-        .period-btn:not(.active):hover { background: linear-gradient(135deg, #74b9ff, #0984e3); }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
 
-        .table-container { padding: 30px; overflow-x: auto; }
-        .leads-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .leads-table th { background: linear-gradient(135deg, #34495e, #2c3e50); color: white; padding: 15px; text-align: left; font-weight: 500; }
-        .leads-table td { padding: 15px; border-bottom: 1px solid #e9ecef; }
-        .leads-table tr:hover { background: #f8f9fa; }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
 
-        .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
-        .status-novo { background: #fff3cd; color: #856404; }
-        .status-agendado { background: #d4edda; color: #155724; }
-        .status-compareceu { background: #d1e7dd; color: #0a3622; }
-        .status-faltou { background: #f8d7da; color: #58151c; }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
 
-        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
-        .modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 15px; padding: 30px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e9ecef; padding-bottom: 15px; }
-        .modal-header h3 { color: #2c3e50; font-size: 1.5em; }
-        .close { font-size: 24px; font-weight: bold; cursor: pointer; color: #999; transition: color 0.3s; }
-        .close:hover { color: #333; }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
 
-        .no-leads { text-align: center; padding: 40px; color: #7f8c8d; }
-        .loading { display: flex; justify-content: center; align-items: center; padding: 40px; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
 
-        .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #2c3e50;
+            border: 2px solid #e9ecef;
+        }
 
-        /* Reports Styles */
-        .reports-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .report-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; border-left: 4px solid #3498db; }
-        .report-number { font-size: 2em; font-weight: bold; color: #2c3e50; margin-bottom: 5px; }
-        .report-label { color: #7f8c8d; font-size: 0.9em; }
-        .chart-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .chart-bar { display: flex; align-items: center; margin-bottom: 10px; gap: 10px; }
-        .chart-label { min-width: 120px; font-size: 14px; color: #2c3e50; }
-        .chart-progress { flex: 1; height: 20px; background: #ecf0f1; border-radius: 10px; overflow: hidden; }
-        .chart-fill { height: 100%; background: linear-gradient(135deg, #3498db, #2980b9); border-radius: 10px; transition: width 0.3s ease; }
-        .chart-value { min-width: 40px; font-weight: bold; color: #2c3e50; font-size: 14px; }
-        .insights-container { background: #e8f5e8; padding: 20px; border-radius: 10px; border-left: 4px solid #27ae60; }
-        .insights-container h4 { color: #27ae60; margin-bottom: 15px; }
-        .insights-list { list-style: none; padding: 0; }
-        .insights-list li { padding: 8px 0; border-bottom: 1px solid rgba(39, 174, 96, 0.1); color: #2c3e50; }
-        .insights-list li:before { content: "💡 "; margin-right: 8px; }
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
 
-        /* Responsive */
+        .btn-info {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .auth-switch {
+            margin-top: 20px;
+            color: #7f8c8d;
+        }
+
+        .auth-switch a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .auth-switch a:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            display: none;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .controls-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            width: 250px;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .status-filter {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .status-filter select {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .period-filter {
+            margin-bottom: 15px;
+        }
+
+        .period-btn {
+            font-size: 14px;
+            padding: 8px 16px;
+            transition: all 0.3s ease;
+        }
+
+        .period-btn.active {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(39, 174, 96, 0.3);
+        }
+
+        .period-btn:not(.active):hover {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+        }
+
+        .table-container {
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        .leads-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .leads-table th {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .leads-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .leads-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-novo {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-agendado {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-compareceu {
+            background: #d1e7dd;
+            color: #0a3622;
+        }
+
+        .status-faltou {
+            background: #f8d7da;
+            color: #58151c;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 15px;
+        }
+
+        .modal-header h3 {
+            color: #2c3e50;
+            font-size: 1.5em;
+        }
+
+        .close {
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .no-leads {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            min-width: 300px;
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
         @media (max-width: 768px) {
             body { padding: 10px; }
             .header { padding: 20px; flex-direction: column; gap: 15px; text-align: center; }
@@ -122,14 +505,11 @@
             .actions { flex-direction: column; gap: 4px; min-width: 60px; }
             .modal-content { width: 95%; margin: 10px; padding: 20px; }
             .btn { padding: 14px 20px; font-size: 16px; }
-            .reports-grid { grid-template-columns: repeat(2, 1fr); }
-            .chart-label { min-width: 80px; }
         }
+
         @media (max-width: 480px) {
             .stats { grid-template-columns: 1fr; }
             .header h1 { font-size: 1.5em; }
-            .reports-grid { grid-template-columns: 1fr; }
-            .leads-table { min-width: 600px; font-size: 12px; }
         }
     </style>
 </head>
@@ -138,6 +518,7 @@
         <div class="auth-card">
             <h1>⚡ Flash Leads</h1>
             <p>Sistema Profissional de Gestão de Leads</p>
+            
             <div id="loginForm">
                 <div class="form-group">
                     <label for="loginEmail">Email</label>
@@ -147,10 +528,17 @@
                     <label for="loginPassword">Senha</label>
                     <input type="password" id="loginPassword" placeholder="••••••••" required>
                 </div>
-                <button class="btn btn-primary" onclick="handleLogin()" style="width: 100%; margin-bottom: 15px;">Entrar</button>
-                <button class="btn btn-secondary" onclick="loginWithGoogle()" style="width: 100%; margin-bottom: 15px;">🔍 Entrar com Google</button>
-                <div class="auth-switch">Não tem conta? <a href="#" onclick="showRegister()">Criar conta</a></div>
+                <button class="btn btn-primary" onclick="handleLogin()" style="width: 100%; margin-bottom: 15px;">
+                    Entrar
+                </button>
+                <button class="btn btn-secondary" onclick="loginWithGoogle()" style="width: 100%; margin-bottom: 15px;">
+                    🔍 Entrar com Google
+                </button>
+                <div class="auth-switch">
+                    Não tem conta? <a href="#" onclick="showRegister()">Criar conta</a>
+                </div>
             </div>
+
             <div id="registerForm" style="display: none;">
                 <div class="form-group">
                     <label for="registerName">Nome Completo</label>
@@ -168,8 +556,12 @@
                     <label for="registerClinic">Nome da Clínica</label>
                     <input type="text" id="registerClinic" placeholder="Sua clínica" required>
                 </div>
-                <button class="btn btn-primary" onclick="handleRegister()" style="width: 100%; margin-bottom: 15px;">Criar Conta</button>
-                <div class="auth-switch">Já tem conta? <a href="#" onclick="showLogin()">Fazer login</a></div>
+                <button class="btn btn-primary" onclick="handleRegister()" style="width: 100%; margin-bottom: 15px;">
+                    Criar Conta
+                </button>
+                <div class="auth-switch">
+                    Já tem conta? <a href="#" onclick="showLogin()">Fazer login</a>
+                </div>
             </div>
         </div>
     </div>
@@ -183,20 +575,46 @@
             <div class="user-info">
                 <div class="user-avatar" id="userAvatar">U</div>
                 <span id="userName">Usuário</span>
-                <button class="btn btn-secondary" onclick="logout()" style="margin-left: 15px; padding: 8px 16px; width: auto;">Sair</button>
+                <button class="btn btn-secondary" onclick="logout()" style="margin-left: 15px; padding: 8px 16px;">
+                    Sair
+                </button>
             </div>
         </div>
 
         <div class="controls">
             <div class="stats">
-                <div class="stat-card"><div class="stat-number" id="totalLeads">0</div><div class="stat-label">Total de Leads</div></div>
-                <div class="stat-card"><div class="stat-number" id="novosLeads">0</div><div class="stat-label">Leads Novos</div></div>
-                <div class="stat-card"><div class="stat-number" id="agendadosLeads">0</div><div class="stat-label">Agendados</div></div>
-                <div class="stat-card"><div class="stat-number" id="compareceuLeads">0</div><div class="stat-label">Compareceram</div></div>
-                <div class="stat-card"><div class="stat-number" id="faltouLeads">0</div><div class="stat-label">Faltaram</div></div>
-                <div class="stat-card"><div class="stat-number" id="leadsMes">0</div><div class="stat-label">Leads Este Mês</div></div>
-                <div class="stat-card"><div class="stat-number" id="taxaAgendamento">0%</div><div class="stat-label">Taxa de Agendamento</div></div>
-                <div class="stat-card"><div class="stat-number" id="taxaComparecimento">0%</div><div class="stat-label">Taxa de Comparecimento</div></div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalLeads">0</div>
+                    <div class="stat-label">Total de Leads</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="novosLeads">0</div>
+                    <div class="stat-label">Leads Novos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="agendadosLeads">0</div>
+                    <div class="stat-label">Agendados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="compareceuLeads">0</div>
+                    <div class="stat-label">Compareceram</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="faltouLeads">0</div>
+                    <div class="stat-label">Faltaram</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="leadsMes">0</div>
+                    <div class="stat-label">Leads Este Mês</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="taxaAgendamento">0%</div>
+                    <div class="stat-label">Taxa de Agendamento</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="taxaComparecimento">0%</div>
+                    <div class="stat-label">Taxa de Comparecimento</div>
+                </div>
             </div>
 
             <div class="controls-top">
@@ -213,21 +631,41 @@
                         </select>
                     </div>
                 </div>
+                
                 <div class="period-filter">
                     <label><strong>Filtrar por período:</strong></label>
                     <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center;">
-                        <button class="btn btn-info period-btn active" data-period="all" onclick="filterByPeriod('all')">Todos</button>
-                        <button class="btn btn-info period-btn" data-period="today" onclick="filterByPeriod('today')">Hoje</button>
-                        <button class="btn btn-info period-btn" data-period="week" onclick="filterByPeriod('week')">Esta Semana</button>
-                        <button class="btn btn-info period-btn" data-period="month" onclick="filterByPeriod('month')">Este Mês</button>
-                        <button class="btn btn-info period-btn" data-period="quarter" onclick="filterByPeriod('quarter')">Trimestre</button>
+                        <button class="btn btn-info period-btn active" data-period="all" onclick="filterByPeriod('all')">
+                            Todos
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="today" onclick="filterByPeriod('today')">
+                            Hoje
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="week" onclick="filterByPeriod('week')">
+                            Esta Semana
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="month" onclick="filterByPeriod('month')">
+                            Este Mês
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="quarter" onclick="filterByPeriod('quarter')">
+                            Trimestre
+                        </button>
                     </div>
                 </div>
+                
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn btn-primary" onclick="openAddLeadModal()">➕ Adicionar Novo Lead</button>
-                    <button class="btn btn-info" onclick="showSettingsModal()">⚙️ Configurações</button>
-                    <button class="btn btn-warning" onclick="showReportsModal()">📊 Relatórios</button>
-                    <button class="btn btn-success" onclick="refreshSystem()">🔄 Atualizar</button>
+                    <button class="btn btn-primary" onclick="openAddLeadModal()">
+                        ➕ Adicionar Novo Lead
+                    </button>
+                    <button class="btn btn-info" onclick="showSettingsModal()">
+                        ⚙️ Configurações
+                    </button>
+                    <button class="btn btn-warning" onclick="showReportsModal()">
+                        📊 Relatórios
+                    </button>
+                    <button class="btn btn-success" onclick="refreshSystem()">
+                        🔄 Atualizar
+                    </button>
                 </div>
             </div>
         </div>
@@ -248,7 +686,9 @@
                 <tbody id="leadsTableBody">
                     <tr class="no-leads">
                         <td colspan="7">
-                            <div class="loading"><div class="spinner"></div></div>
+                            <div class="loading">
+                                <div class="spinner"></div>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
@@ -256,14 +696,14 @@
         </div>
     </div>
 
-    <!-- Modals -->
+    <!-- Modal Adicionar/Editar Lead -->
     <div id="addLeadModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="modalTitle">Adicionar Novo Lead</h3>
                 <span class="close" onclick="closeModal('addLeadModal')">&times;</span>
             </div>
-            <form id="leadForm">
+            <form id="leadForm" onsubmit="saveLead(event)">
                 <div class="form-group">
                     <label for="patientName">Nome do Paciente *</label>
                     <input type="text" id="patientName" required>
@@ -307,6 +747,7 @@
         </div>
     </div>
 
+    <!-- Modal Configurações -->
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -323,28 +764,24 @@
             </div>
             <div class="form-group">
                 <label><strong>Mensagem Padrão:</strong></label>
-                <textarea id="defaultMessage" style="height: 120px;">Olá {nome}! 😊
-
-Tudo bem? Aqui é da {clinica} 🦷
-
-Vi que você tem interesse em {procedimento}. Que tal agendar uma consulta?
-
-Temos horários disponíveis esta semana!
-
-Posso te ajudar? 📞</textarea>
+                <textarea id="defaultMessage" style="height: 120px;" placeholder="Olá {nome}! Tudo bem? Aqui é da {clinica}..."></textarea>
             </div>
             <div class="form-group">
-                <button onclick="saveSettings()" class="btn btn-primary" style="width: 100%;">💾 Salvar Configurações</button>
+                <button onclick="saveSettings()" class="btn btn-primary" style="width: 100%;">
+                    💾 Salvar Configurações
+                </button>
             </div>
         </div>
     </div>
 
+    <!-- Modal Relatórios -->
     <div id="reportsModal" class="modal">
-        <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-content" style="max-width: 800px;">
             <div class="modal-header">
                 <h3>📊 Relatórios e Análises</h3>
                 <span class="close" onclick="closeModal('reportsModal')">&times;</span>
             </div>
+            
             <div style="margin-bottom: 20px;">
                 <label><strong>Período para Análise:</strong></label>
                 <div style="display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap;">
@@ -355,17 +792,24 @@ Posso te ajudar? 📞</textarea>
                     <button class="btn btn-info" onclick="generateReport('all')">Todos</button>
                 </div>
             </div>
+            
             <div id="reportResults">
-                <p style="text-align: center; color: #666; padding: 40px;">Selecione um período acima para gerar o relatório</p>
+                <p style="text-align: center; color: #666; padding: 40px;">
+                    Selecione um período acima para gerar o relatório
+                </p>
             </div>
         </div>
     </div>
 
     <script>
+        // IMPORTANTE: Substitua estas constantes com suas credenciais do Supabase
         const SUPABASE_URL = 'https://bjqfxroulfxyqhqopnns.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcWZ4cm91bGZ4eXFocW9wbm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNTkzODEsImV4cCI6MjA2ODgzNTM4MX0.7TRJhwzvbHK23rQP2T6azq6c2mVSDPBgfgwadpZxbjg';
+        
+        // Inicialização do Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
+        // Variáveis globais
         let currentUser = null;
         let currentEditId = null;
         let currentPeriodFilter = 'all';
@@ -373,34 +817,99 @@ Posso te ajudar? 📞</textarea>
         let userSettings = {
             clinic_name: 'Minha Clínica',
             whatsapp: '',
-            default_message: 'Olá {nome}! 😊\n\nTudo bem? Aqui é da {clinica} 🦷\n\nVi que você tem interesse em {procedimento}. Que tal agendar uma consulta?\n\nTemos horários disponíveis esta semana!\n\nPosso te ajudar? 📞',
+            default_message: 'Olá {nome}! Tudo bem? Aqui é da {clinica}. Vi que você tem interesse em {procedimento}. Que tal agendar uma consulta?',
             auto_reminders: false,
             reminder_days: 2
         };
 
+        // Inicialização
         document.addEventListener('DOMContentLoaded', async function() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) { currentUser = session.user; showMainApp(); } 
-            else { showAuthScreen(); }
+            console.log('Flash Leads iniciando...');
             
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+                currentUser = session.user;
+                showMainApp();
+            } else {
+                showAuthScreen();
+            }
+            
+            // Listener para mudanças de autenticação
             supabase.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_IN') { currentUser = session.user; showMainApp(); } 
-                else if (event === 'SIGNED_OUT') { currentUser = null; showAuthScreen(); }
+                if (event === 'SIGNED_IN') {
+                    currentUser = session.user;
+                    showMainApp();
+                } else if (event === 'SIGNED_OUT') {
+                    currentUser = null;
+                    showAuthScreen();
+                }
             });
+            
+            // Event listeners
+            document.getElementById('searchInput').addEventListener('input', filterLeads);
+            document.getElementById('statusFilter').addEventListener('change', filterLeads);
+            
+            // Prevenir envio do formulário sem JavaScript
+            document.getElementById('leadForm').addEventListener('submit', saveLead);
         });
 
-        function showLogin() { document.getElementById('loginForm').style.display = 'block'; document.getElementById('registerForm').style.display = 'none'; }
-        function showRegister() { document.getElementById('loginForm').style.display = 'none'; document.getElementById('registerForm').style.display = 'block'; }
+        // Funções de Autenticação
+        function showAuthScreen() {
+            document.getElementById('authScreen').style.display = 'flex';
+            document.getElementById('mainApp').style.display = 'none';
+        }
+
+        function showMainApp() {
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            
+            // Atualizar informações do usuário
+            if (currentUser) {
+                const userName = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Usuário';
+                document.getElementById('userName').textContent = userName;
+                document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+            }
+            
+            // Carregar dados
+            loadLeads();
+            loadSettings();
+        }
+
+        function showLogin() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+        }
+
+        function showRegister() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+        }
 
         async function handleLogin() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
-            if (!email || !password) { showAlert('Preencha todos os campos!', 'error'); return; }
+            
+            if (!email || !password) {
+                showAlert('Por favor, preencha todos os campos!', 'error');
+                return;
+            }
+            
             try {
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
                 if (error) throw error;
-                showAlert('Login realizado!', 'success');
-            } catch (error) { showAlert('Erro: ' + error.message, 'error'); }
+                
+                showAlert('Login realizado com sucesso!', 'success');
+                currentUser = data.user;
+                showMainApp();
+            } catch (error) {
+                console.error('Erro no login:', error);
+                showAlert(error.message || 'Erro ao fazer login. Verifique suas credenciais.', 'error');
+            }
         }
 
         async function handleRegister() {
@@ -408,94 +917,74 @@ Posso te ajudar? 📞</textarea>
             const email = document.getElementById('registerEmail').value;
             const password = document.getElementById('registerPassword').value;
             const clinic = document.getElementById('registerClinic').value;
+            
+            if (!name || !email || !password || !clinic) {
+                showAlert('Por favor, preencha todos os campos!', 'error');
+                return;
+            }
+            
             try {
+                // Criar usuário
                 const { data, error } = await supabase.auth.signUp({
-                    email, password,
-                    options: { data: { full_name: name, clinic_name: clinic } }
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            name: name,
+                            clinic_name: clinic
+                        }
+                    }
                 });
+                
                 if (error) throw error;
-                showAlert('Conta criada! Verifique seu email.', 'success');
+                
+                // Criar configurações iniciais
+                if (data.user) {
+                    await supabase.from('user_settings').insert({
+                        user_id: data.user.id,
+                        clinic_name: clinic,
+                        default_message: userSettings.default_message
+                    });
+                }
+                
+                showAlert('Conta criada com sucesso! Verifique seu email para confirmar.', 'success');
                 showLogin();
-            } catch (error) { showAlert('Erro: ' + error.message, 'error'); }
+            } catch (error) {
+                console.error('Erro no registro:', error);
+                showAlert(error.message || 'Erro ao criar conta. Tente novamente.', 'error');
+            }
         }
 
         async function loginWithGoogle() {
             try {
                 const { data, error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
-                    options: { redirectTo: window.location.origin }
+                    options: {
+                        redirectTo: window.location.origin
+                    }
                 });
+                
                 if (error) throw error;
-            } catch (error) { showAlert('Erro Google: ' + error.message, 'error'); }
+            } catch (error) {
+                console.error('Erro no login com Google:', error);
+                showAlert('Erro ao fazer login com Google. Tente novamente.', 'error');
+            }
         }
 
         async function logout() {
             try {
                 const { error } = await supabase.auth.signOut();
                 if (error) throw error;
-                showAlert('Logout realizado!', 'success');
-            } catch (error) { showAlert('Erro logout: ' + error.message, 'error'); }
+                
+                showAlert('Logout realizado com sucesso!', 'success');
+                showAuthScreen();
+            } catch (error) {
+                console.error('Erro no logout:', error);
+                showAlert('Erro ao fazer logout. Tente novamente.', 'error');
+            }
         }
 
-        function showAuthScreen() {
-            document.getElementById('authScreen').style.display = 'flex';
-            document.getElementById('mainApp').style.display = 'none';
-        }
-
-        async function showMainApp() {
-            document.getElementById('authScreen').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'block';
-            setupUserInfo();
-            setupEventListeners();
-            await loadUserData();
-            await loadLeads();
-            updateStats();
-            renderLeads();
-        }
-
-        function setupUserInfo() {
-            const userName = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
-            document.getElementById('userName').textContent = userName;
-            document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
-        }
-
-        function setupEventListeners() {
-            document.getElementById('searchInput').addEventListener('input', filterLeads);
-            document.getElementById('statusFilter').addEventListener('change', filterLeads);
-            document.getElementById('leadForm').addEventListener('submit', handleFormSubmit);
-            window.addEventListener('click', function(event) {
-                if (event.target.classList.contains('modal')) event.target.style.display = 'none';
-            });
-        }
-
-        async function loadUserData() {
-            try {
-                const { data: settings, error } = await supabase
-                    .from('user_settings')
-                    .select('*')
-                    .eq('user_id', currentUser.id)
-                    .single();
-                if (settings) userSettings = settings;
-                else await createDefaultSettings();
-            } catch (error) { console.error('Erro carregar dados:', error); }
-        }
-
-        async function createDefaultSettings() {
-            const defaultSettings = {
-                user_id: currentUser.id,
-                clinic_name: currentUser.user_metadata?.clinic_name || 'Minha Clínica',
-                whatsapp: '',
-                default_message: userSettings.default_message,
-                auto_reminders: false,
-                reminder_days: 2
-            };
-            try {
-                const { data, error } = await supabase.from('user_settings').insert([defaultSettings]).select().single();
-                if (error) throw error;
-                userSettings = data;
-            } catch (error) { console.error('Erro criar config:', error); }
-        }
-
+        // Funções de Leads
         async function loadLeads() {
             try {
                 const { data, error } = await supabase
@@ -503,450 +992,508 @@ Posso te ajudar? 📞</textarea>
                     .select('*')
                     .eq('user_id', currentUser.id)
                     .order('created_at', { ascending: false });
+                
                 if (error) throw error;
+                
                 leads = data || [];
-            } catch (error) { console.error('Erro carregar leads:', error); leads = []; }
-        }
-
-        function handleFormSubmit(e) {
-            e.preventDefault();
-            const formData = {
-                name: document.getElementById('patientName').value,
-                phone: document.getElementById('phone').value,
-                procedure: document.getElementById('procedure').value,
-                status: document.getElementById('status').value,
-                observations: document.getElementById('observations').value
-            };
-            if (currentEditId) updateLead(currentEditId, formData);
-            else addLead(formData);
-        }
-
-        async function addLead(formData) {
-            if (!formData.name || !formData.phone || !formData.procedure) {
-                showAlert('Preencha os campos obrigatórios!', 'error');
-                return;
+                displayLeads();
+                updateStats();
+            } catch (error) {
+                console.error('Erro ao carregar leads:', error);
+                showAlert('Erro ao carregar leads. Tente atualizar a página.', 'error');
             }
-            const newLead = {
-                user_id: currentUser.id,
-                name: formData.name,
-                phone: formData.phone,
-                procedure: formData.procedure,
-                status: formData.status || 'novo',
-                observations: formData.observations || '',
-                created_at: new Date().toISOString()
-            };
-            try {
-                const { data, error } = await supabase.from('leads').insert([newLead]).select().single();
-                if (error) throw error;
-                leads.unshift(data);
-                updateStats();
-                renderLeads();
-                closeModal('addLeadModal');
-                document.getElementById('leadForm').reset();
-                showAlert('Lead adicionado!', 'success');
-            } catch (error) { showAlert('Erro: ' + error.message, 'error'); }
         }
 
-        async function updateLead(leadId, formData) {
-            try {
-                const { data, error } = await supabase
-                    .from('leads')
-                    .update({ ...formData, updated_at: new Date().toISOString() })
-                    .eq('id', leadId)
-                    .eq('user_id', currentUser.id)
-                    .select()
-                    .single();
-                if (error) throw error;
-                const index = leads.findIndex(lead => lead.id === leadId);
-                if (index !== -1) leads[index] = data;
-                updateStats();
-                renderLeads();
-                closeModal('addLeadModal');
-                document.getElementById('leadForm').reset();
-                currentEditId = null;
-                document.getElementById('modalTitle').textContent = 'Adicionar Novo Lead';
-                showAlert('Lead atualizado!', 'success');
-            } catch (error) { showAlert('Erro: ' + error.message, 'error'); }
-        }
-
-        async function updateLeadStatus(leadId, newStatus) {
-            try {
-                const { data, error } = await supabase
-                    .from('leads')
-                    .update({ status: newStatus, updated_at: new Date().toISOString() })
-                    .eq('id', leadId)
-                    .eq('user_id', currentUser.id)
-                    .select()
-                    .single();
-                if (error) throw error;
-                const index = leads.findIndex(lead => lead.id === leadId);
-                if (index !== -1) leads[index] = data;
-                updateStats();
-                renderLeads();
-                showAlert('Status atualizado!', 'success');
-            } catch (error) { showAlert('Erro: ' + error.message, 'error'); }
-        }
-
-        async function deleteLead(leadId) {
-            const lead = leads.find(l => l.id === leadId);
-            if (!lead || !confirm(`Excluir lead de ${lead.name}?`)) return;
-            try {
-                const { error } = await supabase.from('leads').delete().eq('id', leadId).eq('user_id', currentUser.id);
-                if (error) throw error;
-                leads = leads.filter(lead => lead.id !== leadId);
-                updateStats();
-                renderLeads();
-                showAlert('Lead excluído!', 'success');
-            } catch (error) { showAlert('Erro: ' + error.message, 'error'); }
-        }
-
-        function updateStats() {
-            const total = leads.length;
-            const novos = leads.filter(lead => lead.status === 'novo').length;
-            const agendados = leads.filter(lead => lead.status === 'agendado').length;
-            const compareceu = leads.filter(lead => lead.status === 'compareceu').length;
-            const faltou = leads.filter(lead => lead.status === 'faltou').length;
-            
-            const leadsProcessados = leads.filter(lead => ['agendado', 'compareceu', 'faltou'].includes(lead.status)).length;
-            const taxaAgendamento = total > 0 ? Math.round((leadsProcessados / total) * 100) : 0;
-            const totalConsultas = compareceu + faltou;
-            const taxaComparecimento = totalConsultas > 0 ? Math.round((compareceu / totalConsultas) * 100) : 0;
-            
-            const currentMonth = new Date().getMonth();
-            const currentYear = new Date().getFullYear();
-            const leadsMes = leads.filter(lead => {
-                const leadDate = new Date(lead.created_at);
-                return leadDate.getMonth() === currentMonth && leadDate.getFullYear() === currentYear;
-            }).length;
-
-            document.getElementById('totalLeads').textContent = total;
-            document.getElementById('novosLeads').textContent = novos;
-            document.getElementById('agendadosLeads').textContent = agendados;
-            document.getElementById('compareceuLeads').textContent = compareceu;
-            document.getElementById('faltouLeads').textContent = faltou;
-            document.getElementById('taxaAgendamento').textContent = taxaAgendamento + '%';
-            document.getElementById('taxaComparecimento').textContent = taxaComparecimento + '%';
-            document.getElementById('leadsMes').textContent = leadsMes;
-        }
-
-        function renderLeads(filteredLeads = null) {
+        function displayLeads() {
             const tbody = document.getElementById('leadsTableBody');
-            const leadsToRender = filteredLeads || leads;
+            const filteredLeads = getFilteredLeads();
             
-            if (leadsToRender.length === 0) {
-                let message = 'Clique em "Adicionar Novo Lead" para começar';
-                if (filteredLeads !== null && leads.length > 0) message = 'Nenhum lead encontrado com os filtros aplicados';
-                tbody.innerHTML = `<tr class="no-leads"><td colspan="7"><h3>Nenhum lead encontrado</h3><p>${message}</p></td></tr>`;
+            if (filteredLeads.length === 0) {
+                tbody.innerHTML = `
+                    <tr class="no-leads">
+                        <td colspan="7">
+                            <p>Nenhum lead encontrado</p>
+                            <button class="btn btn-primary" onclick="openAddLeadModal()">
+                                Adicionar Primeiro Lead
+                            </button>
+                        </td>
+                    </tr>
+                `;
                 return;
             }
-
-            tbody.innerHTML = leadsToRender.map(lead => `
+            
+            tbody.innerHTML = filteredLeads.map(lead => `
                 <tr>
-                    <td><strong>${lead.name}</strong></td>
-                    <td>${lead.phone}</td>
+                    <td><strong>${lead.patient_name}</strong></td>
+                    <td>${formatPhone(lead.phone)}</td>
                     <td>${lead.procedure}</td>
                     <td>${formatDate(lead.created_at)}</td>
-                    <td><span class="status-badge status-${lead.status}">${getStatusText(lead.status)}</span></td>
+                    <td><span class="status-badge status-${lead.status}">${lead.status}</span></td>
                     <td>${lead.observations || '-'}</td>
-                    <td>
-                        <div class="actions">
-                            ${lead.status === 'novo' ? `<button class="btn btn-success" onclick="updateLeadStatus(${lead.id}, 'agendado')" title="Agendar">📅</button>` : ''}
-                            <button class="btn btn-info" onclick="sendWhatsApp('${lead.phone}', '${lead.name}', '${lead.procedure}')" title="WhatsApp">💬</button>
-                            ${lead.status === 'agendado' ? `
-                                <button class="btn btn-success" onclick="updateLeadStatus(${lead.id}, 'compareceu')" title="Compareceu">✅</button>
-                                <button class="btn btn-danger" onclick="updateLeadStatus(${lead.id}, 'faltou')" title="Faltou">❌</button>
-                            ` : ''}
-                            <button class="btn btn-warning" onclick="editLead(${lead.id})" title="Editar">✏️</button>
-                            <button class="btn btn-danger" onclick="deleteLead(${lead.id})" title="Excluir">🗑️</button>
-                        </div>
+                    <td class="actions">
+                        <button class="btn btn-info" onclick="editLead('${lead.id}')">✏️</button>
+                        <button class="btn btn-success" onclick="sendWhatsApp('${lead.phone}', '${lead.patient_name}', '${lead.procedure}')">📱</button>
+                        <button class="btn btn-danger" onclick="deleteLead('${lead.id}')">🗑️</button>
                     </td>
                 </tr>
             `).join('');
         }
 
-        function filterLeads() {
+        function getFilteredLeads() {
+            let filtered = [...leads];
+            
+            // Filtro de busca
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            if (searchTerm) {
+                filtered = filtered.filter(lead => 
+                    lead.patient_name.toLowerCase().includes(searchTerm) ||
+                    lead.phone.includes(searchTerm)
+                );
+            }
+            
+            // Filtro de status
             const statusFilter = document.getElementById('statusFilter').value;
-            let filtered = leads.filter(lead => {
-                const matchesSearch = lead.name.toLowerCase().includes(searchTerm) || lead.phone.includes(searchTerm);
-                const matchesStatus = !statusFilter || lead.status === statusFilter;
-                return matchesSearch && matchesStatus;
-            });
-            filtered = applyPeriodFilter(filtered);
-            renderLeads(filtered);
-            updateFilteredStats(filtered);
+            if (statusFilter) {
+                filtered = filtered.filter(lead => lead.status === statusFilter);
+            }
+            
+            // Filtro de período
+            if (currentPeriodFilter !== 'all') {
+                const now = new Date();
+                const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+                
+                filtered = filtered.filter(lead => {
+                    const leadDate = new Date(lead.created_at);
+                    
+                    switch (currentPeriodFilter) {
+                        case 'today':
+                            return leadDate >= startOfDay;
+                        case 'week':
+                            const weekAgo = new Date(now.setDate(now.getDate() - 7));
+                            return leadDate >= weekAgo;
+                        case 'month':
+                            const monthAgo = new Date(now.setMonth(now.getMonth() - 1));
+                            return leadDate >= monthAgo;
+                        case 'quarter':
+                            const quarterAgo = new Date(now.setMonth(now.getMonth() - 3));
+                            return leadDate >= quarterAgo;
+                        default:
+                            return true;
+                    }
+                });
+            }
+            
+            return filtered;
         }
 
-        function applyPeriodFilter(leadsArray) {
-            if (currentPeriodFilter === 'all') return leadsArray;
-            const now = new Date();
-            let startDate;
-            switch(currentPeriodFilter) {
-                case 'today': startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); break;
-                case 'week': startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
-                case 'month': startDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
-                case 'quarter': startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1); break;
-                default: return leadsArray;
-            }
-            return leadsArray.filter(lead => new Date(lead.created_at) >= startDate);
+        function filterLeads() {
+            displayLeads();
         }
 
         function filterByPeriod(period) {
             currentPeriodFilter = period;
-            document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+            
+            // Atualizar botões ativos
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
             document.querySelector(`[data-period="${period}"]`).classList.add('active');
-            filterLeads();
-        }
-
-        function updateFilteredStats(filteredLeads) {
-            const total = filteredLeads.length;
-            const novos = filteredLeads.filter(lead => lead.status === 'novo').length;
-            const agendados = filteredLeads.filter(lead => lead.status === 'agendado').length;
-            const compareceu = filteredLeads.filter(lead => lead.status === 'compareceu').length;
-            const faltou = filteredLeads.filter(lead => lead.status === 'faltou').length;
             
-            const leadsProcessados = filteredLeads.filter(lead => ['agendado', 'compareceu', 'faltou'].includes(lead.status)).length;
-            const taxaAgendamento = total > 0 ? Math.round((leadsProcessados / total) * 100) : 0;
-            const totalConsultas = compareceu + faltou;
-            const taxaComparecimento = totalConsultas > 0 ? Math.round((compareceu / totalConsultas) * 100) : 0;
+            displayLeads();
+        }
+
+        async function saveLead(event) {
+            event.preventDefault();
             
-            let leadsPeriodo;
-            if (currentPeriodFilter === 'all') {
-                const currentMonth = new Date().getMonth();
-                const currentYear = new Date().getFullYear();
-                leadsPeriodo = leads.filter(lead => {
-                    const leadDate = new Date(lead.created_at);
-                    return leadDate.getMonth() === currentMonth && leadDate.getFullYear() === currentYear;
-                }).length;
-            } else { leadsPeriodo = total; }
-
-            document.getElementById('totalLeads').textContent = total;
-            document.getElementById('novosLeads').textContent = novos;
-            document.getElementById('agendadosLeads').textContent = agendados;
-            document.getElementById('compareceuLeads').textContent = compareceu;
-            document.getElementById('faltouLeads').textContent = faltou;
-            document.getElementById('taxaAgendamento').textContent = taxaAgendamento + '%';
-            document.getElementById('taxaComparecimento').textContent = taxaComparecimento + '%';
-            document.getElementById('leadsMes').textContent = leadsPeriodo;
+            const leadData = {
+                patient_name: document.getElementById('patientName').value,
+                phone: document.getElementById('phone').value,
+                procedure: document.getElementById('procedure').value,
+                status: document.getElementById('status').value,
+                observations: document.getElementById('observations').value,
+                user_id: currentUser.id
+            };
+            
+            try {
+                if (currentEditId) {
+                    // Atualizar lead existente
+                    const { error } = await supabase
+                        .from('leads')
+                        .update(leadData)
+                        .eq('id', currentEditId)
+                        .eq('user_id', currentUser.id);
+                    
+                    if (error) throw error;
+                    showAlert('Lead atualizado com sucesso!', 'success');
+                } else {
+                    // Criar novo lead
+                    const { error } = await supabase
+                        .from('leads')
+                        .insert(leadData);
+                    
+                    if (error) throw error;
+                    showAlert('Lead adicionado com sucesso!', 'success');
+                }
+                
+                closeModal('addLeadModal');
+                loadLeads();
+            } catch (error) {
+                console.error('Erro ao salvar lead:', error);
+                showAlert('Erro ao salvar lead. Tente novamente.', 'error');
+            }
         }
 
-        function sendWhatsApp(phone, name, procedure) {
-            const message = userSettings.default_message
-                .replace('{nome}', name)
-                .replace('{clinica}', userSettings.clinic_name)
-                .replace('{procedimento}', procedure);
-            const cleanPhone = phone.replace(/\D/g, '');
-            const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone;
-            const encodedMessage = encodeURIComponent(message);
-            const whatsappURL = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
-            window.open(whatsappURL, '_blank');
-            showAlert(`WhatsApp aberto para ${name}!`, 'success');
-        }
-
-        function editLead(id) {
+        async function editLead(id) {
             const lead = leads.find(l => l.id === id);
             if (!lead) return;
+            
             currentEditId = id;
             document.getElementById('modalTitle').textContent = 'Editar Lead';
-            document.getElementById('patientName').value = lead.name;
+            document.getElementById('patientName').value = lead.patient_name;
             document.getElementById('phone').value = lead.phone;
             document.getElementById('procedure').value = lead.procedure;
             document.getElementById('status').value = lead.status;
             document.getElementById('observations').value = lead.observations || '';
-            document.getElementById('addLeadModal').style.display = 'block';
+            
+            openModal('addLeadModal');
         }
 
-        function showReportsModal() { document.getElementById('reportsModal').style.display = 'block'; }
-
-        function generateReport(period) {
-            const reportContainer = document.getElementById('reportResults');
-            reportContainer.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-            setTimeout(() => {
-                const filteredLeads = filterLeadsByPeriod(leads, period);
-                displayReport(filteredLeads, period);
-            }, 800);
-        }
-
-        function filterLeadsByPeriod(leadsArray, period) {
-            if (period === 'all') return leadsArray;
-            const now = new Date();
-            let startDate;
-            switch(period) {
-                case 'week': startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
-                case 'month': startDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
-                case 'quarter': startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1); break;
-                case 'year': startDate = new Date(now.getFullYear(), 0, 1); break;
-                default: return leadsArray;
+        async function deleteLead(id) {
+            if (!confirm('Tem certeza que deseja excluir este lead?')) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('leads')
+                    .delete()
+                    .eq('id', id)
+                    .eq('user_id', currentUser.id);
+                
+                if (error) throw error;
+                
+                showAlert('Lead excluído com sucesso!', 'success');
+                loadLeads();
+            } catch (error) {
+                console.error('Erro ao excluir lead:', error);
+                showAlert('Erro ao excluir lead. Tente novamente.', 'error');
             }
-            return leadsArray.filter(lead => new Date(lead.created_at) >= startDate);
         }
 
-        function displayReport(filteredLeads, period) {
-            const total = filteredLeads.length;
-            const novo = filteredLeads.filter(l => l.status === 'novo').length;
-            const agendado = filteredLeads.filter(l => l.status === 'agendado').length;
-            const compareceu = filteredLeads.filter(l => l.status === 'compareceu').length;
-            const faltou = filteredLeads.filter(l => l.status === 'faltou').length;
-            
-            const taxaAgendamento = total > 0 ? ((agendado / total) * 100).toFixed(1) : 0;
-            const taxaComparecimento = (agendado + compareceu + faltou) > 0 ? 
-                ((compareceu / (agendado + compareceu + faltou)) * 100).toFixed(1) : 0;
-            const taxaConversao = total > 0 ? (((agendado + compareceu) / total) * 100).toFixed(1) : 0;
-            
-            const procedimentos = {};
-            filteredLeads.forEach(lead => {
-                if (!procedimentos[lead.procedure]) procedimentos[lead.procedure] = { total: 0, agendados: 0 };
-                procedimentos[lead.procedure].total++;
-                if (['agendado', 'compareceu'].includes(lead.status)) procedimentos[lead.procedure].agendados++;
-            });
-            
-            const procedimentosOrdenados = Object.entries(procedimentos).sort((a, b) => b[1].total - a[1].total).slice(0, 5);
-            const insights = generateInsights(filteredLeads, taxaAgendamento, taxaComparecimento, procedimentosOrdenados);
-            
-            const reportHTML = `
-                <div style="background: #f8f9fa; padding: 25px; border-radius: 10px;">
-                    <h3 style="margin-bottom: 20px; color: #2c3e50;">📊 Relatório: ${getPeriodName(period)}</h3>
-                    <div class="reports-grid">
-                        <div class="report-card"><div class="report-number">${total}</div><div class="report-label">Total de Leads</div></div>
-                        <div class="report-card"><div class="report-number">${taxaAgendamento}%</div><div class="report-label">Taxa de Agendamento</div></div>
-                        <div class="report-card"><div class="report-number">${taxaComparecimento}%</div><div class="report-label">Taxa de Comparecimento</div></div>
-                        <div class="report-card"><div class="report-number">${taxaConversao}%</div><div class="report-label">Taxa de Conversão</div></div>
-                    </div>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px;">
-                        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; text-align: center;"><strong>${novo}</strong><br>Novos</div>
-                        <div style="background: #d4edda; padding: 15px; border-radius: 8px; text-align: center;"><strong>${agendado}</strong><br>Agendados</div>
-                        <div style="background: #d1e7dd; padding: 15px; border-radius: 8px; text-align: center;"><strong>${compareceu}</strong><br>Compareceram</div>
-                        <div style="background: #f8d7da; padding: 15px; border-radius: 8px; text-align: center;"><strong>${faltou}</strong><br>Faltaram</div>
-                    </div>
-                    ${procedimentosOrdenados.length > 0 ? `
-                        <div class="chart-container">
-                            <h4 style="margin-bottom: 15px; color: #2c3e50;">📋 Procedimentos Mais Procurados</h4>
-                            ${procedimentosOrdenados.map(([proc, data]) => {
-                                const percentage = total > 0 ? (data.total / total) * 100 : 0;
-                                return `<div class="chart-bar"><div class="chart-label">${proc}</div><div class="chart-progress"><div class="chart-fill" style="width: ${percentage}%"></div></div><div class="chart-value">${data.total}</div></div>`;
-                            }).join('')}
-                        </div>
-                    ` : ''}
-                    <div class="insights-container">
-                        <h4>💡 Insights e Recomendações</h4>
-                        <ul class="insights-list">${insights.map(insight => `<li>${insight}</li>`).join('')}</ul>
-                    </div>
-                </div>
-            `;
-            document.getElementById('reportResults').innerHTML = reportHTML;
-        }
-
-        function generateInsights(leads, taxaAgendamento, taxaComparecimento, procedimentosOrdenados) {
-            const insights = [];
-            if (parseFloat(taxaAgendamento) < 30) insights.push('Taxa de agendamento baixa. Considere melhorar o follow-up dos leads.');
-            else if (parseFloat(taxaAgendamento) > 70) insights.push('Excelente taxa de agendamento! Continue com a estratégia atual.');
-            if (parseFloat(taxaComparecimento) < 60) insights.push('Taxa de comparecimento pode melhorar. Considere enviar lembretes via WhatsApp.');
-            else if (parseFloat(taxaComparecimento) > 85) insights.push('Ótima taxa de comparecimento! Seus pacientes são bem engajados.');
-            if (procedimentosOrdenados.length > 0) {
-                const topProcedimento = procedimentosOrdenados[0];
-                insights.push(`Procedimento mais procurado: ${topProcedimento[0]} (${topProcedimento[1].total} leads).`);
+        // Funções de Configurações
+        async function loadSettings() {
+            try {
+                const { data, error } = await supabase
+                    .from('user_settings')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .single();
+                
+                if (error && error.code !== 'PGRST116') throw error;
+                
+                if (data) {
+                    userSettings = { ...userSettings, ...data };
+                    document.getElementById('clinicName').value = userSettings.clinic_name || '';
+                    document.getElementById('clinicWhatsapp').value = userSettings.whatsapp || '';
+                    document.getElementById('defaultMessage').value = userSettings.default_message || '';
+                }
+            } catch (error) {
+                console.error('Erro ao carregar configurações:', error);
             }
-            if (insights.length === 0) insights.push('Continue monitorando os indicadores para identificar oportunidades de melhoria.');
-            return insights;
-        }
-
-        function getPeriodName(period) {
-            const periodMap = { 'week': 'Esta Semana', 'month': 'Este Mês', 'quarter': 'Este Trimestre', 'year': 'Este Ano', 'all': 'Todos os Períodos' };
-            return periodMap[period] || period;
-        }
-
-        function showSettingsModal() {
-            document.getElementById('clinicName').value = userSettings.clinic_name || '';
-            document.getElementById('clinicWhatsapp').value = userSettings.whatsapp || '';
-            document.getElementById('defaultMessage').value = userSettings.default_message || '';
-            document.getElementById('settingsModal').style.display = 'block';
         }
 
         async function saveSettings() {
-            const clinicName = document.getElementById('clinicName').value;
-            const clinicWhatsapp = document.getElementById('clinicWhatsapp').value;
-            const defaultMessage = document.getElementById('defaultMessage').value;
-            const updatedSettings = { clinic_name: clinicName, whatsapp: clinicWhatsapp, default_message: defaultMessage, updated_at: new Date().toISOString() };
+            const settings = {
+                clinic_name: document.getElementById('clinicName').value,
+                whatsapp: document.getElementById('clinicWhatsapp').value,
+                default_message: document.getElementById('defaultMessage').value,
+                user_id: currentUser.id
+            };
+            
             try {
-                const { data, error } = await supabase.from('user_settings').update(updatedSettings).eq('user_id', currentUser.id).select().single();
+                const { error } = await supabase
+                    .from('user_settings')
+                    .upsert(settings, { onConflict: 'user_id' });
+                
                 if (error) throw error;
-                userSettings = { ...userSettings, ...data };
+                
+                userSettings = { ...userSettings, ...settings };
+                showAlert('Configurações salvas com sucesso!', 'success');
                 closeModal('settingsModal');
-                showAlert('Configurações salvas!', 'success');
-            } catch (error) { showAlert('Erro: ' + error.message, 'error'); }
+            } catch (error) {
+                console.error('Erro ao salvar configurações:', error);
+                showAlert('Erro ao salvar configurações. Tente novamente.', 'error');
+            }
         }
 
-        function openAddLeadModal() {
-            currentEditId = null;
-            document.getElementById('modalTitle').textContent = 'Adicionar Novo Lead';
-            document.getElementById('leadForm').reset();
-            document.getElementById('addLeadModal').style.display = 'block';
+        // Funções de Estatísticas
+        function updateStats() {
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            
+            // Total de leads
+            document.getElementById('totalLeads').textContent = leads.length;
+            
+            // Leads por status
+            const statusCounts = {
+                novo: 0,
+                agendado: 0,
+                compareceu: 0,
+                faltou: 0
+            };
+            
+            let leadsThisMonth = 0;
+            
+            leads.forEach(lead => {
+                statusCounts[lead.status]++;
+                
+                if (new Date(lead.created_at) >= startOfMonth) {
+                    leadsThisMonth++;
+                }
+            });
+            
+            document.getElementById('novosLeads').textContent = statusCounts.novo;
+            document.getElementById('agendadosLeads').textContent = statusCounts.agendado;
+            document.getElementById('compareceuLeads').textContent = statusCounts.compareceu;
+            document.getElementById('faltouLeads').textContent = statusCounts.faltou;
+            document.getElementById('leadsMes').textContent = leadsThisMonth;
+            
+            // Taxas
+            const totalProcessed = statusCounts.agendado + statusCounts.compareceu + statusCounts.faltou;
+            const taxaAgendamento = totalProcessed > 0 ? ((totalProcessed / leads.length) * 100).toFixed(1) : 0;
+            const taxaComparecimento = statusCounts.agendado > 0 ? ((statusCounts.compareceu / statusCounts.agendado) * 100).toFixed(1) : 0;
+            
+            document.getElementById('taxaAgendamento').textContent = taxaAgendamento + '%';
+            document.getElementById('taxaComparecimento').textContent = taxaComparecimento + '%';
+        }
+
+        // Funções de Relatórios
+        function generateReport(period) {
+            const reportData = getReportData(period);
+            const reportHTML = `
+                <div style="padding: 20px;">
+                    <h4 style="color: #2c3e50; margin-bottom: 20px;">📊 Relatório - ${getPeriodLabel(period)}</h4>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px;">
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #3498db;">${reportData.total}</div>
+                            <div style="color: #666;">Total de Leads</div>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #27ae60;">${reportData.taxaConversao}%</div>
+                            <div style="color: #666;">Taxa de Conversão</div>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #e74c3c;">${reportData.taxaPerda}%</div>
+                            <div style="color: #666;">Taxa de Perda</div>
+                        </div>
+                    </div>
+                    
+                    <h5 style="color: #2c3e50; margin-bottom: 15px;">Status dos Leads</h5>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr style="background: #f8f9fa;">
+                            <th style="padding: 10px; text-align: left;">Status</th>
+                            <th style="padding: 10px; text-align: center;">Quantidade</th>
+                            <th style="padding: 10px; text-align: center;">Percentual</th>
+                        </tr>
+                        ${Object.entries(reportData.statusBreakdown).map(([status, count]) => `
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                                    <span class="status-badge status-${status}">${status}</span>
+                                </td>
+                                <td style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">${count}</td>
+                                <td style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">
+                                    ${reportData.total > 0 ? ((count / reportData.total) * 100).toFixed(1) : 0}%
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                    
+                    <h5 style="color: #2c3e50; margin: 20px 0 15px;">Procedimentos Mais Procurados</h5>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr style="background: #f8f9fa;">
+                            <th style="padding: 10px; text-align: left;">Procedimento</th>
+                            <th style="padding: 10px; text-align: center;">Quantidade</th>
+                            <th style="padding: 10px; text-align: center;">Percentual</th>
+                        </tr>
+                        ${Object.entries(reportData.procedureBreakdown)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 5)
+                            .map(([procedure, count]) => `
+                                <tr>
+                                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${procedure}</td>
+                                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">${count}</td>
+                                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">
+                                        ${reportData.total > 0 ? ((count / reportData.total) * 100).toFixed(1) : 0}%
+                                    </td>
+                                </tr>
+                            `).join('')}
+                    </table>
+                    
+                    <div style="margin-top: 30px; padding: 15px; background: #e3f2fd; border-radius: 8px;">
+                        <strong>💡 Insights:</strong>
+                        <ul style="margin: 10px 0 0 20px;">
+                            ${reportData.insights.map(insight => `<li>${insight}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('reportResults').innerHTML = reportHTML;
+        }
+
+        function getReportData(period) {
+            const filteredLeads = getLeadsByPeriod(period);
+            const statusBreakdown = { novo: 0, agendado: 0, compareceu: 0, faltou: 0 };
+            const procedureBreakdown = {};
+            
+            filteredLeads.forEach(lead => {
+                statusBreakdown[lead.status]++;
+                procedureBreakdown[lead.procedure] = (procedureBreakdown[lead.procedure] || 0) + 1;
+            });
+            
+            const total = filteredLeads.length;
+            const conversoes = statusBreakdown.compareceu;
+            const perdas = statusBreakdown.faltou;
+            
+            const insights = [];
+            if (total > 0) {
+                const taxaConv = (conversoes / total) * 100;
+                if (taxaConv < 30) insights.push('Taxa de conversão baixa. Considere melhorar o follow-up.');
+                if (taxaConv > 50) insights.push('Excelente taxa de conversão! Continue com as boas práticas.');
+                
+                const topProcedure = Object.entries(procedureBreakdown).sort((a, b) => b[1] - a[1])[0];
+                if (topProcedure) insights.push(`"${topProcedure[0]}" é o procedimento mais procurado.`);
+                
+                if (statusBreakdown.novo > total * 0.5) {
+                    insights.push('Muitos leads novos. Foque em agendar consultas.');
+                }
+            }
+            
+            return {
+                total,
+                statusBreakdown,
+                procedureBreakdown,
+                taxaConversao: total > 0 ? ((conversoes / total) * 100).toFixed(1) : 0,
+                taxaPerda: total > 0 ? ((perdas / total) * 100).toFixed(1) : 0,
+                insights
+            };
+        }
+
+        function getLeadsByPeriod(period) {
+            const now = new Date();
+            let startDate;
+            
+            switch (period) {
+                case 'week':
+                    startDate = new Date(now.setDate(now.getDate() - 7));
+                    break;
+                case 'month':
+                    startDate = new Date(now.setMonth(now.getMonth() - 1));
+                    break;
+                case 'quarter':
+                    startDate = new Date(now.setMonth(now.getMonth() - 3));
+                    break;
+                case 'year':
+                    startDate = new Date(now.setFullYear(now.getFullYear() - 1));
+                    break;
+                default:
+                    return leads;
+            }
+            
+            return leads.filter(lead => new Date(lead.created_at) >= startDate);
+        }
+
+        function getPeriodLabel(period) {
+            const labels = {
+                week: 'Última Semana',
+                month: 'Último Mês',
+                quarter: 'Último Trimestre',
+                year: 'Último Ano',
+                all: 'Todos os Períodos'
+            };
+            return labels[period] || period;
+        }
+
+        // Funções Utilitárias
+        function formatPhone(phone) {
+            const cleaned = phone.replace(/\D/g, '');
+            if (cleaned.length === 11) {
+                return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+            }
+            return phone;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function sendWhatsApp(phone, name, procedure) {
+            const cleanPhone = phone.replace(/\D/g, '');
+            let message = userSettings.default_message
+                .replace('{nome}', name)
+                .replace('{clinica}', userSettings.clinic_name || 'Nossa clínica')
+                .replace('{procedimento}', procedure);
+            
+            const whatsappUrl = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
         }
 
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
             if (modalId === 'addLeadModal') {
                 currentEditId = null;
+                document.getElementById('leadForm').reset();
                 document.getElementById('modalTitle').textContent = 'Adicionar Novo Lead';
             }
         }
 
+        function openAddLeadModal() {
+            currentEditId = null;
+            document.getElementById('leadForm').reset();
+            document.getElementById('modalTitle').textContent = 'Adicionar Novo Lead';
+            openModal('addLeadModal');
+        }
+
+        function showSettingsModal() {
+            loadSettings();
+            openModal('settingsModal');
+        }
+
+        function showReportsModal() {
+            openModal('reportsModal');
+        }
+
         function refreshSystem() {
-            const refreshBtn = document.querySelector('.btn-success');
-            const originalText = refreshBtn.innerHTML;
-            refreshBtn.innerHTML = '⏳ Atualizando...';
-            refreshBtn.disabled = true;
-            setTimeout(async () => {
-                try {
-                    await loadLeads();
-                    await loadUserData();
-                    document.getElementById('searchInput').value = '';
-                    document.getElementById('statusFilter').value = '';
-                    filterByPeriod('all');
-                    updateStats();
-                    renderLeads();
-                    showAlert('Sistema atualizado!', 'success');
-                } catch (error) { showAlert('Erro ao atualizar!', 'error'); }
-                finally { refreshBtn.innerHTML = originalText; refreshBtn.disabled = false; }
-            }, 800);
+            showAlert('Atualizando sistema...', 'info');
+            loadLeads();
+            loadSettings();
         }
 
-        function showAlert(message, type) {
-            const existingAlerts = document.querySelectorAll('.alert');
-            existingAlerts.forEach(alert => alert.remove());
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type}`;
-            alert.textContent = message;
-            const container = document.querySelector('.auth-card') || document.querySelector('.container');
-            if (container) container.insertBefore(alert, container.firstChild);
-            setTimeout(() => { if (alert.parentNode) alert.remove(); }, 5000);
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
         }
 
-        function formatDate(dateString) { return new Date(dateString).toLocaleDateString('pt-BR'); }
-        function getStatusText(status) {
-            const statusMap = { 'novo': 'Novo', 'agendado': 'Agendado', 'compareceu': 'Compareceu', 'faltou': 'Faltou' };
-            return statusMap[status] || status;
+        // Fechar modais ao clicar fora
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
         }
-
-        // Global functions
-        window.filterByPeriod = filterByPeriod;
-        window.updateLeadStatus = updateLeadStatus;
-        window.sendWhatsApp = sendWhatsApp;
-        window.editLead = editLead;
-        window.deleteLead = deleteLead;
-        window.openAddLeadModal = openAddLeadModal;
-        window.closeModal = closeModal;
-        window.showSettingsModal = showSettingsModal;
-        window.saveSettings = saveSettings;
-        window.showReportsModal = showReportsModal;
-        window.generateReport = generateReport;
-        window.refreshSystem = refreshSystem;
-        window.showLogin = showLogin;
-        window.showRegister = showRegister;
-        window.handleLogin = handleLogin;
-        window.handleRegister = handleRegister;
-        window.loginWithGoogle = loginWithGoogle;
-        window.logout = logout;
-    </script>
-</body>
-</html>
