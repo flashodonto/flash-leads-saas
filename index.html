@@ -885,11 +885,84 @@
 
     <script>
         // IMPORTANTE: Substitua estas constantes com suas credenciais do Supabase
+        // Obtenha em: https://app.supabase.com → Settings → API
         const SUPABASE_URL = 'https://bjqfxroulfxyqhqopnns.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcWZ4cm91bGZ4eXFocW9wbm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNTkzODEsImV4cCI6MjA2ODgzNTM4MX0.7TRJhwzvbHK23rQP2T6azq6c2mVSDPBgfgwadpZxbjg';
         
+        // Verificar se as credenciais foram configuradas
+        if (SUPABASE_URL === 'https://bjqfxroulfxyqhqopnns.supabase.co' || SUPABASE_ANON_KEY === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcWZ4cm91bGZ4eXFocW9wbm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNTkzODEsImV4cCI6MjA2ODgzNTM4MX0.7TRJhwzvbHK23rQP2T6azq6c2mVSDPBgfgwadpZxbjg') {
+            document.body.innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f0f2f5; padding: 20px;">
+                    <div style="background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 600px;">
+                        <h2 style="color: #e74c3c; margin-bottom: 20px; text-align: center;">⚠️ Configuração Necessária</h2>
+                        <p style="font-size: 18px; color: #333; margin-bottom: 30px; text-align: center;">
+                            Para usar o Flash Leads, você precisa configurar as credenciais do Supabase.
+                        </p>
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                            <h3 style="margin-bottom: 15px;">📋 Passo a passo rápido:</h3>
+                            <ol style="line-height: 2; margin-left: 20px;">
+                                <li>Acesse <a href="https://supabase.com" target="_blank" style="color: #3498db;">supabase.com</a></li>
+                                <li>Crie uma conta gratuita</li>
+                                <li>Crie um novo projeto</li>
+                                <li>Vá em <strong>Settings → API</strong></li>
+                                <li>Copie a <strong>URL</strong> e a <strong>anon public key</strong></li>
+                                <li>Cole no código substituindo os valores de exemplo</li>
+                            </ol>
+                        </div>
+                        <div style="background: #2c3e50; color: #fff; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 14px; overflow-x: auto;">
+                            <div style="color: #95a5a6;">// Substitua estas linhas no código:</div>
+                            <div>const SUPABASE_URL = '<span style="color: #e74c3c;">sua-url-aqui</span>';</div>
+                            <div>const SUPABASE_ANON_KEY = '<span style="color: #e74c3c;">sua-chave-aqui</span>';</div>
+                        </div>
+                        <div style="margin-top: 20px; text-align: center;">
+                            <button onclick="location.reload()" style="padding: 12px 30px; background: #3498db; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                                🔄 Recarregar Página
+                            </button>
+                        </div>
+                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
+                            <p style="color: #666; font-size: 14px;">
+                                Precisa de ajuda? Veja o guia completo de configuração que preparei para você.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            console.error('❌ Flash Leads: Credenciais do Supabase não configuradas!');
+            console.log('📚 Veja o guia completo de configuração');
+            return;
+        }
+        
         // Inicialização do Supabase
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let supabase;
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log('✅ Supabase conectado com sucesso!');
+        } catch (error) {
+            console.error('❌ Erro ao conectar com Supabase:', error);
+            document.body.innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f0f2f5;">
+                    <div style="background: white; padding: 40px; border-radius: 10px; text-align: center; max-width: 500px;">
+                        <h2 style="color: #e74c3c;">❌ Erro de Conexão</h2>
+                        <p style="margin: 20px 0; color: #555;">Não foi possível conectar ao Supabase.</p>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: left; margin: 20px 0;">
+                            <strong>Possíveis causas:</strong>
+                            <ul style="margin: 10px 0 0 20px;">
+                                <li>Credenciais inválidas</li>
+                                <li>Projeto Supabase pausado</li>
+                                <li>Erro de conexão com internet</li>
+                            </ul>
+                        </div>
+                        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <strong>💡 Dica:</strong> Abra o console do navegador (F12) para ver o erro detalhado.
+                        </div>
+                        <button onclick="location.reload()" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            Tentar Novamente
+                        </button>
+                    </div>
+                </div>
+            `;
+            return;
+        }
         
         // Variáveis globais
         let currentUser = null;
@@ -937,7 +1010,7 @@
                 let csv = 'Nome,Telefone,Procedimento,Status,Data,Observações\n';
                 
                 filteredLeads.forEach(lead => {
-                    csv += `"${lead.patient_name}","${lead.phone}","${lead.procedure}","${lead.status}","${formatDate(lead.created_at)}","${lead.observations || ''}"\n`;
+                    csv += `"${lead.name}","${lead.phone}","${lead.procedure}","${lead.status}","${formatDate(lead.created_at)}","${lead.observations || ''}"\n`;
                 });
                 
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -974,7 +1047,7 @@
                         }
                         
                         const lead = {
-                            patient_name: values[0].replace(/"/g, ''),
+                            name: values[0].replace(/"/g, ''),
                             phone: values[1].replace(/"/g, ''),
                             procedure: values[2].replace(/"/g, ''),
                             status: values[3].replace(/"/g, ''),
@@ -1029,38 +1102,36 @@
             }
         }
 
-        // Adicionar atalhos de teclado
-        document.addEventListener('keydown', function(e) {
-            // Ctrl/Cmd + N: Novo lead
-            if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-                e.preventDefault();
-                openAddLeadModal();
+        // Inicialização principal
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Flash Leads iniciando...');
+            
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+                currentUser = session.user;
+                showMainApp();
+            } else {
+                showAuthScreen();
             }
             
-            // Ctrl/Cmd + S: Salvar (quando modal aberto)
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                const modal = document.getElementById('addLeadModal');
-                if (modal.style.display === 'block') {
-                    document.getElementById('leadForm').dispatchEvent(new Event('submit'));
+            // Listener para mudanças de autenticação
+            supabase.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_IN') {
+                    currentUser = session.user;
+                    showMainApp();
+                } else if (event === 'SIGNED_OUT') {
+                    currentUser = null;
+                    showAuthScreen();
                 }
-            }
+            });
             
-            // Ctrl/Cmd + F: Focar na busca
-            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-                e.preventDefault();
-                const searchInput = document.getElementById('searchInput');
-                if (searchInput) searchInput.focus();
-            }
-            
-            // ESC: Fechar modais
-            if (e.key === 'Escape') {
-                document.querySelectorAll('.modal').forEach(modal => {
-                    if (modal.style.display === 'block') {
-                        modal.style.display = 'none';
-                    }
-                });
-            }
+            // Verificar atualizações a cada 30 segundos
+            setInterval(() => {
+                if (currentUser) {
+                    loadLeads();
+                }
+            }, 30000);
         });
 
         // Funções de Autenticação
@@ -1284,13 +1355,13 @@
             
             tbody.innerHTML = filteredLeads.map(lead => {
                 // Escapar valores para evitar problemas com aspas
-                const escapedName = lead.patient_name.replace(/'/g, "\\'");
+                const escapedName = lead.name.replace(/'/g, "\\'");
                 const escapedPhone = lead.phone.replace(/'/g, "\\'");
                 const escapedProcedure = lead.procedure.replace(/'/g, "\\'");
                 
                 return `
                     <tr>
-                        <td><strong>${lead.patient_name}</strong></td>
+                        <td><strong>${lead.name}</strong></td>
                         <td>${formatPhone(lead.phone)}</td>
                         <td>${lead.procedure}</td>
                         <td>${formatDate(lead.created_at)}</td>
@@ -1313,7 +1384,7 @@
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             if (searchTerm) {
                 filtered = filtered.filter(lead => 
-                    lead.patient_name.toLowerCase().includes(searchTerm) ||
+                    lead.name.toLowerCase().includes(searchTerm) ||
                     lead.phone.includes(searchTerm)
                 );
             }
@@ -1373,7 +1444,7 @@
             event.preventDefault();
             
             const leadData = {
-                patient_name: document.getElementById('patientName').value,
+                name: document.getElementById('patientName').value,
                 phone: document.getElementById('phone').value,
                 procedure: document.getElementById('procedure').value,
                 status: document.getElementById('status').value,
@@ -1416,7 +1487,7 @@
             
             currentEditId = id;
             document.getElementById('modalTitle').textContent = 'Editar Lead';
-            document.getElementById('patientName').value = lead.patient_name;
+            document.getElementById('patientName').value = lead.name;
             document.getElementById('phone').value = lead.phone;
             document.getElementById('procedure').value = lead.procedure;
             document.getElementById('status').value = lead.status;
@@ -1491,8 +1562,34 @@
             }
         }
 
-        // Funções de Estatísticas
-        function updateStats() {
+        // Função de Estatísticas usando a função SQL
+        async function updateStats() {
+            try {
+                // Usar a função SQL get_user_stats criada no banco
+                const { data, error } = await supabase
+                    .rpc('get_user_stats', { user_uuid: currentUser.id });
+                
+                if (error) throw error;
+                
+                // Atualizar interface com os dados retornados
+                document.getElementById('totalLeads').textContent = data.total_leads || 0;
+                document.getElementById('novosLeads').textContent = data.leads_novo || 0;
+                document.getElementById('agendadosLeads').textContent = data.leads_agendado || 0;
+                document.getElementById('compareceuLeads').textContent = data.leads_compareceu || 0;
+                document.getElementById('faltouLeads').textContent = data.leads_faltou || 0;
+                document.getElementById('leadsMes').textContent = data.leads_mes || 0;
+                document.getElementById('taxaAgendamento').textContent = (data.taxa_agendamento || 0) + '%';
+                document.getElementById('taxaComparecimento').textContent = (data.taxa_comparecimento || 0) + '%';
+                
+            } catch (error) {
+                console.error('Erro ao buscar estatísticas:', error);
+                // Fallback para cálculo local se a função SQL falhar
+                updateStatsLocal();
+            }
+        }
+
+        // Função de estatísticas local (fallback)
+        function updateStatsLocal() {
             const now = new Date();
             const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
             
