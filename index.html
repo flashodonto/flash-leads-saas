@@ -924,29 +924,6 @@
             input.value = value;
         }
 
-        // Adicionar máscara de telefone ao campo
-        document.addEventListener('DOMContentLoaded', function() {
-            const phoneInput = document.getElementById('phone');
-            if (phoneInput) {
-                phoneInput.addEventListener('input', function() {
-                    formatPhoneInput(this);
-                });
-            }
-        });
-
-        // Função de busca avançada
-        function setupAdvancedSearch() {
-            const searchInput = document.getElementById('searchInput');
-            let searchTimeout;
-            
-            searchInput.addEventListener('input', function() {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    filterLeads();
-                }, 300); // Debounce de 300ms
-            });
-        }
-
         // Função para exportar leads
         function exportLeads(format = 'csv') {
             const filteredLeads = getFilteredLeads();
@@ -1046,7 +1023,7 @@
                             if (!error) {
                                 showAlert('Observações salvas automaticamente', 'info');
                             }
-                        }, 2000); // Auto-save após 2 segundos de inatividade
+                        }, 2000);
                     }
                 });
             }
@@ -1072,7 +1049,8 @@
             // Ctrl/Cmd + F: Focar na busca
             if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
                 e.preventDefault();
-                document.getElementById('searchInput').focus();
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) searchInput.focus();
             }
             
             // ESC: Fechar modais
@@ -1083,80 +1061,6 @@
                     }
                 });
             }
-        });
-
-        // Adicionar botões de exportação/importação na interface
-        function addImportExportButtons() {
-            const controlsTop = document.querySelector('.controls-top > div:last-child');
-            
-            if (controlsTop && !document.getElementById('exportBtn')) {
-                const exportBtn = document.createElement('button');
-                exportBtn.id = 'exportBtn';
-                exportBtn.className = 'btn btn-secondary';
-                exportBtn.innerHTML = '📥 Exportar CSV';
-                exportBtn.onclick = () => exportLeads('csv');
-                
-                const importBtn = document.createElement('button');
-                importBtn.id = 'importBtn';
-                importBtn.className = 'btn btn-secondary';
-                importBtn.innerHTML = '📤 Importar CSV';
-                importBtn.onclick = () => {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = '.csv';
-                    input.onchange = (e) => importLeads(e.target.files[0]);
-                    input.click();
-                };
-                
-                controlsTop.appendChild(exportBtn);
-                controlsTop.appendChild(importBtn);
-            }
-        }
-
-        // Melhorar a função de inicialização
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('Flash Leads iniciando...');
-            
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (session) {
-                currentUser = session.user;
-                showMainApp();
-            } else {
-                showAuthScreen();
-            }
-            
-            // Listener para mudanças de autenticação
-            supabase.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_IN') {
-                    currentUser = session.user;
-                    showMainApp();
-                } else if (event === 'SIGNED_OUT') {
-                    currentUser = null;
-                    showAuthScreen();
-                }
-            });
-            
-            // Event listeners
-            document.getElementById('searchInput').addEventListener('input', filterLeads);
-            document.getElementById('statusFilter').addEventListener('change', filterLeads);
-            
-            // Prevenir envio do formulário sem JavaScript
-            document.getElementById('leadForm').addEventListener('submit', saveLead);
-            
-            // Configurar funcionalidades avançadas
-            setupAdvancedSearch();
-            setupAutoSave();
-            
-            // Adicionar botões de importação/exportação
-            setTimeout(addImportExportButtons, 1000);
-            
-            // Verificar atualizações a cada 30 segundos
-            setInterval(() => {
-                if (currentUser) {
-                    loadLeads();
-                }
-            }, 30000);
         });
 
         // Funções de Autenticação
@@ -1179,6 +1083,29 @@
             // Carregar dados
             loadLeads();
             loadSettings();
+            
+            // Configurar event listeners após carregar a interface
+            setTimeout(() => {
+                const searchInput = document.getElementById('searchInput');
+                const statusFilter = document.getElementById('statusFilter');
+                const phoneInput = document.getElementById('phone');
+                
+                if (searchInput) {
+                    searchInput.addEventListener('input', filterLeads);
+                }
+                
+                if (statusFilter) {
+                    statusFilter.addEventListener('change', filterLeads);
+                }
+                
+                if (phoneInput) {
+                    phoneInput.addEventListener('input', function() {
+                        formatPhoneInput(this);
+                    });
+                }
+                
+                setupAutoSave();
+            }, 100);
         }
 
         function showLogin() {
