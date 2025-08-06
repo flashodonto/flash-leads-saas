@@ -975,10 +975,7 @@
             default_message: 'Olá {nome}! Tudo bem? Aqui é da {clinica}. Vi que você tem interesse em {procedimento}. Que tal agendar uma consulta?',
             auto_reminders: false,
             reminder_days: 2
-        }; é da {clinica}. Vi que você tem interesse em {procedimento}. Que tal agendar uma consulta?',
-            auto_reminders: false,
-            reminder_days: 2
-        };
+        };    
 
         // Função para formatar telefone com máscara
         function formatPhoneInput(input) {
@@ -1571,15 +1568,20 @@
                 
                 if (error) throw error;
                 
-                // Atualizar interface com os dados retornados
-                document.getElementById('totalLeads').textContent = data.total_leads || 0;
-                document.getElementById('novosLeads').textContent = data.leads_novo || 0;
-                document.getElementById('agendadosLeads').textContent = data.leads_agendado || 0;
-                document.getElementById('compareceuLeads').textContent = data.leads_compareceu || 0;
-                document.getElementById('faltouLeads').textContent = data.leads_faltou || 0;
-                document.getElementById('leadsMes').textContent = data.leads_mes || 0;
-                document.getElementById('taxaAgendamento').textContent = (data.taxa_agendamento || 0) + '%';
-                document.getElementById('taxaComparecimento').textContent = (data.taxa_comparecimento || 0) + '%';
+                if (data) {
+                    // Atualizar interface com os dados retornados
+                    document.getElementById('totalLeads').textContent = data.total_leads || 0;
+                    document.getElementById('novosLeads').textContent = data.leads_novo || 0;
+                    document.getElementById('agendadosLeads').textContent = data.leads_agendado || 0;
+                    document.getElementById('compareceuLeads').textContent = data.leads_compareceu || 0;
+                    document.getElementById('faltouLeads').textContent = data.leads_faltou || 0;
+                    document.getElementById('leadsMes').textContent = data.leads_mes || 0;
+                    document.getElementById('taxaAgendamento').textContent = (data.taxa_agendamento || 0) + '%';
+                    document.getElementById('taxaComparecimento').textContent = (data.taxa_comparecimento || 0) + '%';
+                } else {
+                    // Se não retornou dados, usar cálculo local
+                    updateStatsLocal();
+                }
                 
             } catch (error) {
                 console.error('Erro ao buscar estatísticas:', error);
@@ -1804,7 +1806,10 @@
                 .replace('{clinica}', userSettings.clinic_name || 'Nossa clínica')
                 .replace('{procedimento}', procedure);
             
-            const whatsappUrl = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`;
+            // Formatar quebras de linha para WhatsApp
+            message = encodeURIComponent(message).replace(/%0A/g, '%0A');
+            
+            const whatsappUrl = `https://wa.me/55${cleanPhone}?text=${message}`;
             window.open(whatsappUrl, '_blank');
         }
 
