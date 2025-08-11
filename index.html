@@ -1105,19 +1105,41 @@
         function waitForSupabase(callback, attempts = 0) {
             if (typeof window.supabase !== 'undefined') {
                 console.log('✅ Supabase carregado com sucesso');
-                callback();
-            } else if (attempts < 50) {
+                setTimeout(callback, 100); // Pequeno delay para garantir
+            } else if (attempts < 30) {
                 console.log(`🔄 Aguardando Supabase... tentativa ${attempts + 1}`);
-                setTimeout(() => waitForSupabase(callback, attempts + 1), 100);
+                setTimeout(() => waitForSupabase(callback, attempts + 1), 200);
             } else {
                 console.error('❌ Timeout: Supabase não carregou');
-                showError('Erro ao carregar sistema. Recarregue a página.');
+                // Em caso de erro, inicia modo demo
+                console.log('🎯 Iniciando modo demo como fallback...');
+                showScreen('auth');
+                
+                // Adicionar botão de modo demo
+                const authAlert = document.getElementById('authAlert');
+                authAlert.innerHTML = `
+                    <div style="text-align: center;">
+                        <p>⚠️ Problemas de conexão detectados.</p>
+                        <button onclick="initializeDemoMode()" class="btn btn-warning" style="margin-top: 10px; width: 100%;">
+                            🎯 Usar Modo Demonstração
+                        </button>
+                    </div>
+                `;
+                authAlert.className = 'auth-alert info';
+                authAlert.style.display = 'block';
             }
         }
 
         // === INICIALIZAÇÃO SEGURA ===
         function initializeSystem() {
             try {
+                console.log('🔧 Iniciando sistema...');
+                
+                // Verificar se Supabase está disponível
+                if (typeof window.supabase === 'undefined') {
+                    throw new Error('Supabase não está disponível');
+                }
+
                 // Inicializar Supabase
                 supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
                 console.log('✅ Cliente Supabase criado');
@@ -1158,7 +1180,9 @@
 
             } catch (error) {
                 console.error('❌ Erro na inicialização:', error);
-                showError(`Erro de inicialização: ${error.message}`);
+                // Força mostrar tela de auth em caso de erro
+                showAuthScreen();
+                alert(`❌ Erro de inicialização: ${error.message}\n\nO sistema funcionará em modo limitado.`);
             }
         }
 
@@ -1308,16 +1332,71 @@
             }
         }
 
-        function showError(message) {
-            showScreen('auth');
-            alert(`❌ ${message}`);
+        // === MODO DEMO (FALLBACK) ===
+        function initializeDemoMode() {
+            console.log('🎯 Iniciando modo demo/fallback');
+            
+            // Simular usuário demo
+            currentUser = {
+                id: 'demo_user',
+                email: 'demo@flashleads.com',
+                name: 'Usuário Demo',
+                clinic: 'Clínica Demo',
+                phone: '(11) 99999-9999'
+            };
+            isLoggedIn = true;
+            
+            // Dados de exemplo
+            leads = [
+                {
+                    id: Date.now() + 1,
+                    name: "Maria Silva",
+                    phone: "(11) 99999-9999",
+                    procedure: "Clareamento",
+                    date: new Date().toISOString().split('T')[0],
+                    status: "novo",
+                    observations: "Interessada em clareamento a laser"
+                },
+                {
+                    id: Date.now() + 2,
+                    name: "João Santos",
+                    phone: "(11) 88888-8888", 
+                    procedure: "Implante",
+                    date: new Date().toISOString().split('T')[0],
+                    status: "agendado",
+                    observations: "Consulta marcada para próxima semana"
+                }
+            ];
+            
+            // Configurar event listeners
+            setupEventListeners();
+            
+            // Mostrar aplicação principal
+            showMainApp();
+            
+            alert('ℹ️ Sistema rodando em modo demonstração.\nAlgumas funcionalidades podem estar limitadas.');
         }
 
         async function checkExistingSession() {
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                console.log('🔍 Verificando sessão existente...');
+                
+                if (!supabase || !supabase.auth) {
+                    console.log('⚠️ Supabase não disponível, mostrando tela de auth');
+                    showAuthScreen();
+                    return;
+                }
+
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) {
+                    console.error('❌ Erro ao verificar sessão:', error);
+                    showAuthScreen();
+                    return;
+                }
                 
                 if (session && session.user) {
+                    console.log('✅ Sessão existente encontrada');
                     currentUser = {
                         id: session.user.id,
                         email: session.user.email,
@@ -1328,10 +1407,11 @@
                     isLoggedIn = true;
                     showMainApp();
                 } else {
+                    console.log('ℹ️ Nenhuma sessão ativa, mostrando tela de auth');
                     showAuthScreen();
                 }
             } catch (error) {
-                console.error('Erro ao verificar sessão:', error);
+                console.error('❌ Erro ao verificar sessão:', error);
                 showAuthScreen();
             }
         }
@@ -2370,8 +2450,18 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 Flash Leads iniciando...');
             
+            // Timeout de segurança - se não carregar em 5 segundos, força a tela de auth
+            const safetyTimeout = setTimeout(() => {
+                console.warn('⚠️ Timeout de segurança ativado');
+                showAuthScreen();
+                alert('⚠️ O sistema demorou para carregar. Tente fazer login mesmo assim.');
+            }, 5000);
+            
             // Aguardar carregamento do Supabase antes de inicializar
-            waitForSupabase(initializeSystem);
+            waitForSupabase(() => {
+                clearTimeout(safetyTimeout);
+                initializeSystem();
+            });
         });
 
         // Tornar funções globais
@@ -2392,6 +2482,7 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
         window.saveSettingsModal = saveSettingsModal;
         window.generateReport = generateReport;
         window.removeModal = removeModal;
+        window.initializeDemoMode = initializeDemoMode;
 
         console.log('✅ Flash Leads script carregado');
     </script>
