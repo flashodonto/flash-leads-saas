@@ -1,101 +1,951 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Flash Leads - Login</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flash Leads - Gestão de Leads Odontológicos</title>
+    
+    <!-- SUPABASE JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* === ESTILOS DE AUTENTICAÇÃO === */
+        .auth-container {
+            max-width: 400px;
+            margin: 50px auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .auth-header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .auth-header h1 {
+            font-size: 2em;
+            margin-bottom: 5px;
+            font-weight: 300;
+        }
+
+        .auth-header p {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+
+        .auth-content {
+            padding: 30px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 25px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 5px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .auth-tab.active {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .auth-form-group {
+            margin-bottom: 20px;
+        }
+
+        .auth-form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .auth-form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        .auth-form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .auth-form-group input:invalid {
+            border-color: #e74c3c;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .auth-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+        }
+
+        .auth-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .auth-divider {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+            color: #999;
+            font-size: 14px;
+        }
+
+        .auth-divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e1e8ed;
+            z-index: 1;
+        }
+
+        .auth-divider span {
+            background: white;
+            padding: 0 15px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .auth-links {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .auth-links a {
+            color: #3498db;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .auth-links a:hover {
+            color: #2980b9;
+            text-decoration: underline;
+        }
+
+        .auth-alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .auth-alert.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .auth-alert.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .auth-alert.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .btn-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .password-strength {
+            margin-top: 8px;
+            font-size: 12px;
+        }
+
+        .strength-bar {
+            width: 100%;
+            height: 4px;
+            background: #e1e8ed;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .strength-fill {
+            height: 100%;
+            transition: all 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .strength-weak { background: #e74c3c; width: 25%; }
+        .strength-fair { background: #f39c12; width: 50%; }
+        .strength-good { background: #f1c40f; width: 75%; }
+        .strength-strong { background: #27ae60; width: 100%; }
+
+        /* Responsividade para autenticação */
+        @media (max-width: 480px) {
+            .auth-container {
+                margin: 20px auto;
+                max-width: 90%;
+            }
+            
+            .auth-content {
+                padding: 20px;
+            }
+            
+            .auth-header {
+                padding: 20px;
+            }
+            
+            .auth-header h1 {
+                font-size: 1.6em;
+            }
+        }
+
+        /* === ESTILOS ORIGINAIS === */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: none; /* Inicialmente oculto até login */
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .controls-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            width: 250px;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .status-filter {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .status-filter select {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .table-container {
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        .leads-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .leads-table th {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .leads-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .leads-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-novo {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-em-atendimento {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-agendado {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-compareceu {
+            background: #d1e7dd;
+            color: #0a3622;
+        }
+
+        .status-faltou {
+            background: #f8d7da;
+            color: #58151c;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .period-filter {
+            margin-bottom: 15px;
+        }
+
+        .period-btn {
+            font-size: 14px;
+            padding: 8px 16px;
+            transition: all 0.3s ease;
+        }
+
+        .period-btn.active {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(39, 174, 96, 0.3);
+        }
+
+        .period-btn:not(.active):hover {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 15px;
+        }
+
+        .modal-header h3 {
+            color: #2c3e50;
+            font-size: 1.5em;
+        }
+
+        .close {
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .no-leads {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .no-leads h3 {
+            margin-bottom: 10px;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .logout-btn {
+                position: static;
+                margin-top: 15px;
+                display: block;
+                width: auto;
+            }
+
+            .controls {
+                padding: 20px;
+            }
+
+            .controls-top {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+
+            .search-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            .status-filter {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .table-container {
+                padding: 15px;
+                overflow-x: auto;
+            }
+
+            .leads-table {
+                font-size: 14px;
+                min-width: 800px;
+            }
+
+            .leads-table th,
+            .leads-table td {
+                padding: 12px 8px;
+            }
+
+            .actions {
+                flex-direction: column;
+                gap: 4px;
+                min-width: 60px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+                padding: 20px;
+            }
+
+            .btn {
+                padding: 14px 20px;
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
 </head>
 <body>
-  <!-- ==== SEU LAYOUT ORIGINAL AQUI ==== -->
-  <h1>Flash Leads</h1>
+    <!-- === ÁREA DE AUTENTICAÇÃO === -->
+    <div id="authContainer" class="auth-container">
+        <div class="auth-header">
+            <h1>⚡ Flash Leads</h1>
+            <p>Sistema Inteligente de Gestão de Leads Odontológicos</p>
+        </div>
+        
+        <div class="auth-content">
+            <div id="authAlert" class="auth-alert"></div>
+            
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="switchAuthTab('login')">
+                    Entrar
+                </div>
+                <div class="auth-tab" onclick="switchAuthTab('register')">
+                    Criar Conta
+                </div>
+            </div>
 
-  <div class="auth-container">
-    <input type="email" id="email" placeholder="Digite seu e-mail" />
-    <input type="password" id="password" placeholder="Digite sua senha" />
+            <!-- Formulário de Login -->
+            <form id="loginForm" class="auth-form active">
+                <div class="auth-form-group">
+                    <label for="loginEmail">E-mail</label>
+                    <input type="email" id="loginEmail" required placeholder="seu@email.com">
+                </div>
+                <div class="auth-form-group">
+                    <label for="loginPassword">Senha</label>
+                    <input type="password" id="loginPassword" required placeholder="Sua senha">
+                </div>
+                <button type="submit" class="auth-btn" id="loginBtn">
+                    <div class="btn-loading">
+                        <div class="loading-spinner"></div>
+                        <span>Entrar</span>
+                    </div>
+                </button>
+                <div class="auth-links">
+                    <a href="#" onclick="showForgotPassword()">Esqueci minha senha</a>
+                </div>
+            </form>
 
-    <button id="loginButton">Entrar</button>
-    <button id="registerButton">Criar Conta</button>
-    <button id="googleLoginButton">Entrar com Google</button>
+            <!-- Formulário de Cadastro -->
+            <form id="registerForm" class="auth-form">
+                <div class="auth-form-group">
+                    <label for="registerName">Nome Completo</label>
+                    <input type="text" id="registerName" required placeholder="Dr. João Silva">
+                </div>
+                <div class="auth-form-group">
+                    <label for="registerEmail">E-mail</label>
+                    <input type="email" id="registerEmail" required placeholder="seu@email.com">
+                </div>
+                <div class="auth-form-group">
+                    <label for="registerPhone">Telefone/WhatsApp</label>
+                    <input type="tel" id="registerPhone" required placeholder="(11) 99999-9999">
+                </div>
+                <div class="auth-form-group">
+                    <label for="registerClinic">Nome da Clínica</label>
+                    <input type="text" id="registerClinic" required placeholder="Clínica Odontológica">
+                </div>
+                <div class="auth-form-group">
+                    <label for="registerPassword">Senha</label>
+                    <input type="password" id="registerPassword" required placeholder="Mínimo 6 caracteres" minlength="6">
+                    <div class="password-strength">
+                        <div class="strength-bar">
+                            <div id="strengthFill" class="strength-fill"></div>
+                        </div>
+                        <div id="strengthText" style="margin-top: 4px; font-size: 12px;"></div>
+                    </div>
+                </div>
+                <div class="auth-form-group">
+                    <label for="registerConfirmPassword">Confirmar Senha</label>
+                    <input type="password" id="registerConfirmPassword" required placeholder="Digite a senha novamente">
+                </div>
+                <button type="submit" class="auth-btn" id="registerBtn">
+                    <div class="btn-loading">
+                        <div class="loading-spinner"></div>
+                        <span>Criar Conta</span>
+                    </div>
+                </button>
+                <div class="auth-links">
+                    <a href="#" onclick="switchAuthTab('login')">Já tenho uma conta</a>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    <div id="message" style="margin-top: 15px; font-weight: bold;"></div>
-  </div>
+    <!-- === SISTEMA PRINCIPAL === -->
+    <div class="container" id="mainContainer">
+        <div class="header">
+            <button class="logout-btn" onclick="logout()">Sair</button>
+            <h1>⚡ Flash Leads</h1>
+            <p>Sistema Inteligente de Gestão de Leads Odontológicos</p>
+        </div>
 
-  <!-- Biblioteca Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+        <div class="controls">
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalLeads">0</div>
+                    <div class="stat-label">Total de Leads</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="novosLeads">0</div>
+                    <div class="stat-label">Leads Novos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="agendadosLeads">0</div>
+                    <div class="stat-label">Agendados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="compareceuLeads">0</div>
+                    <div class="stat-label">Compareceram</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="faltouLeads">0</div>
+                    <div class="stat-label">Faltaram</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="leadsMes">0</div>
+                    <div class="stat-label">Leads Este Mês</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="taxaAgendamento">0%</div>
+                    <div class="stat-label">Taxa de Agendamento</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="taxaComparecimento">0%</div>
+                    <div class="stat-label">Taxa de Comparecimento</div>
+                </div>
+            </div>
 
-  <!-- ==== SCRIPT DE AUTENTICAÇÃO CORRIGIDO ==== -->
-  <script>
-    // ===== CONFIGURAÇÃO DO SUPABASE =====
-    const SUPABASE_URL = 'https://bjqfxroulfxyqhqopnns.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcWZ4cm91bGZ4eXFocW9wbm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNTkzODEsImV4cCI6MjA2ODgzNTM4MX0.7TRJhwzvbHK23rQP2T6azq6c2mVSDPBgfgwadpZxbjg';
+            <div class="controls-top">
+                <div class="search-container">
+                    <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar por nome ou telefone...">
+                    <div class="status-filter">
+                        <label>Filtrar por status:</label>
+                        <select id="statusFilter">
+                            <option value="">Todos os status</option>
+                            <option value="novo">Novo</option>
+                            <option value="em-atendimento">Em atendimento</option>
+                            <option value="agendado">Agendado</option>
+                            <option value="compareceu">Compareceu</option>
+                            <option value="faltou">Faltou</option>
+                            <option value="perdido">Perdido</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="period-filter">
+                    <label><strong>Filtrar por período:</strong></label>
+                    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center;">
+                        <button class="btn btn-info period-btn active" data-period="all" onclick="filterByPeriod('all')">
+                            Todos
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="today" onclick="filterByPeriod('today')">
+                            Hoje
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="week" onclick="filterByPeriod('week')">
+                            Esta Semana
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="month" onclick="filterByPeriod('month')">
+                            Este Mês
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="quarter" onclick="filterByPeriod('quarter')">
+                            Trimestre
+                        </button>
+                        <button class="btn btn-info period-btn" data-period="custom" onclick="toggleCustomPeriod()">
+                            📅 Personalizado
+                        </button>
+                    </div>
+                    
+                    <div id="customPeriodContainer" style="display: none; margin-top: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <label>De:</label>
+                            <input type="date" id="customStartDate" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <label>Até:</label>
+                            <input type="date" id="customEndDate" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <button class="btn btn-warning" onclick="applyCustomPeriod()">
+                                Aplicar Filtro
+                            </button>
+                            <button class="btn btn-info" onclick="clearCustomPeriod()">
+                                Limpar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" id="addLeadBtn">
+                        ➕ Adicionar Novo Lead
+                    </button>
+                    <button class="btn btn-info" id="settingsBtn">
+                        ⚙️ Configurações
+                    </button>
+                    <button class="btn btn-warning" id="reportsBtn">
+                        📊 Relatórios
+                    </button>
+                    <button class="btn btn-success" id="refreshBtn">
+                        🔄 Atualizar
+                    </button>
+                </div>
+            </div>
+        </div>
 
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // ===== FUNÇÕES DE AUTENTICAÇÃO =====
-    async function handleLogin() {
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value.trim();
-      const messageDiv = document.getElementById('message');
-
-      if (!email || !password) {
-        messageDiv.style.color = "red";
-        messageDiv.textContent = "⚠️ Preencha e-mail e senha.";
-        return;
-      }
-
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-
-      if (error) {
-        messageDiv.style.color = "red";
-        messageDiv.textContent = `❌ Erro: ${error.message}`;
-      } else {
-        messageDiv.style.color = "green";
-        messageDiv.textContent = "✅ Login realizado com sucesso!";
-        setTimeout(() => window.location.href = "dashboard.html", 1000);
-      }
-    }
-
-    async function handleRegister() {
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value.trim();
-      const messageDiv = document.getElementById('message');
-
-      if (!email || !password) {
-        messageDiv.style.color = "red";
-        messageDiv.textContent = "⚠️ Preencha e-mail e senha.";
-        return;
-      }
-
-      const { data, error } = await supabaseClient.auth.signUp({ email, password });
-
-      if (error) {
-        messageDiv.style.color = "red";
-        messageDiv.textContent = `❌ Erro: ${error.message}`;
-      } else {
-        messageDiv.style.color = "green";
-        messageDiv.textContent = "✅ Conta criada! Verifique seu e-mail para confirmar.";
-      }
-    }
-
-    async function loginWithGoogle() {
-      const { data, error } = await supabaseClient.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: window.location.origin + "/dashboard.html" }
-      });
-
-      if (error) {
-        document.getElementById('message').style.color = "red";
-        document.getElementById('message').textContent = `❌ Erro: ${error.message}`;
-      }
-    }
-
-    // ===== CONECTANDO BOTÕES AO CÓDIGO =====
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('loginButton').addEventListener('click', handleLogin);
-      document.getElementById('registerButton').addEventListener('click', handleRegister);
-      document.getElementById('googleLoginButton').addEventListener('click', loginWithGoogle);
-    });
-  </script>
-</body>
-</html>
+        <div class="table-container">
+            <table class="leads-table">
+                <thead>
+                    <tr>
+                        <th>Nome do Paciente</th>
+                        <th>Telefone</th>
+                        <th>Procedimento</th>
+                        <th>Data de Entrada</th>
+                        <th>Status
