@@ -235,7 +235,12 @@
         }
 
         async function loadLeads() {
-            if (!currentUser) return;
+            if (!currentUser) {
+                console.log('Usuário não logado, não carregando leads');
+                return;
+            }
+            
+            console.log('Carregando leads para usuário:', currentUser.email);
             
             // Carregar do Supabase
             const supabaseLeads = await loadLeadsFromSupabase();
@@ -247,26 +252,26 @@
                 // Dados de exemplo para novo usuário
                 leads = [
                     {
-                        id: 1,
+                        id: Date.now() + 1,
                         name: "Maria Silva",
                         phone: "(11) 99999-9999",
                         procedure: "Clareamento",
-                        date: "2024-01-15",
+                        date: new Date().toISOString().split('T')[0],
                         status: "novo",
                         observations: "Interessada em clareamento a laser"
                     },
                     {
-                        id: 2,
+                        id: Date.now() + 2,
                         name: "João Santos",
                         phone: "(11) 88888-8888",
                         procedure: "Implante",
-                        date: "2024-01-14",
+                        date: new Date().toISOString().split('T')[0],
                         status: "agendado",
                         observations: "Consulta marcada para próxima semana"
                     }
                 ];
                 saveLeads();
-                console.log('Dados de exemplo criados');
+                console.log('Dados de exemplo criados para novo usuário');
             }
             
             // Carregar configurações específicas do usuário
@@ -281,8 +286,11 @@
                 saveSettings();
             }
             
-            renderLeads();
-            updateStats();
+            // Renderizar apenas se estivermos na tela principal
+            if (document.getElementById('mainContainer').style.display === 'block') {
+                renderLeads();
+                updateStats();
+            }
         }
 
         function saveSettings() {
@@ -294,22 +302,38 @@
 
         // === FUNÇÕES DE INTERFACE ===
         function hideLoadingScreen() {
-            document.getElementById('loadingScreen').style.display = 'none';
+            const loadingScreen = document.getElementById('loadingScreen');
+            if (loadingScreen) {
+                loadingScreen.style.display = 'none';
+            }
         }
 
         function showAuthScreen() {
+            console.log('Mostrando tela de autenticação');
             hideLoadingScreen();
-            document.getElementById('authContainer').style.display = 'block';
+            
+            // Garantir que o sistema principal esteja completamente oculto
             document.getElementById('mainContainer').style.display = 'none';
+            document.getElementById('authContainer').style.display = 'flex';
+            
+            // Limpar dados de usuário
+            currentUser = null;
+            isLoggedIn = false;
+            leads = [];
         }
 
         function showMainApp() {
+            console.log('Mostrando aplicação principal');
             hideLoadingScreen();
+            
+            // Ocultar completamente a tela de autenticação
             document.getElementById('authContainer').style.display = 'none';
             document.getElementById('mainContainer').style.display = 'block';
             
             // Carregar dados quando mostrar o app principal
-            loadLeads();
+            if (currentUser) {
+                loadLeads();
+            }
         }
 
         function showError(message) {
@@ -1662,8 +1686,11 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
         /* Responsividade para autenticação */
         @media (max-width: 480px) {
             .auth-container {
-                margin: 20px auto;
-                max-width: 90%;
+                padding: 10px;
+            }
+            
+            .auth-box {
+                max-width: 100%;
             }
             
             .auth-content {
@@ -1688,6 +1715,8 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             overflow: hidden;
             display: none; /* Inicialmente oculto até login */
+            position: relative;
+            z-index: 1;
         }
 
         .header {
@@ -2144,22 +2173,23 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
 
     <!-- === ÁREA DE AUTENTICAÇÃO === -->
     <div id="authContainer" class="auth-container" style="display: none;">
-        <div class="auth-header">
-            <h1>⚡ Flash Leads</h1>
-            <p>Sistema Inteligente de Gestão de Leads Odontológicos</p>
-        </div>
-        
-        <div class="auth-content">
-            <div id="authAlert" class="auth-alert"></div>
-            
-            <div class="auth-tabs">
-                <div class="auth-tab active" onclick="switchAuthTab('login')">
-                    Entrar
-                </div>
-                <div class="auth-tab" onclick="switchAuthTab('register')">
-                    Criar Conta
-                </div>
+        <div class="auth-box">
+            <div class="auth-header">
+                <h1>⚡ Flash Leads</h1>
+                <p>Sistema Inteligente de Gestão de Leads Odontológicos</p>
             </div>
+            
+            <div class="auth-content">
+                <div id="authAlert" class="auth-alert"></div>
+                
+                <div class="auth-tabs">
+                    <div class="auth-tab active" onclick="switchAuthTab('login')">
+                        Entrar
+                    </div>
+                    <div class="auth-tab" onclick="switchAuthTab('register')">
+                        Criar Conta
+                    </div>
+                </div>
 
             <!-- Formulário de Login -->
             <form id="loginForm" class="auth-form active">
