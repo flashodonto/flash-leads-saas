@@ -1313,8 +1313,18 @@
 
         // === FUNÇÕES DE INTERFACE ===
         function showAuthScreen() {
-            console.log('Mostrando tela de autenticação');
+            console.log('🔐 Mostrando tela de autenticação');
             showScreen('auth');
+            
+            // Limpar alertas anteriores
+            hideAuthAlert();
+            
+            // Resetar formulários
+            document.getElementById('loginForm').reset();
+            document.getElementById('registerForm').reset();
+            
+            // Garantir que a aba de login esteja ativa
+            switchAuthTab('login');
             
             // Limpar dados de usuário
             currentUser = null;
@@ -1336,45 +1346,54 @@
         function initializeDemoMode() {
             console.log('🎯 Iniciando modo demo/fallback');
             
-            // Simular usuário demo
-            currentUser = {
-                id: 'demo_user',
-                email: 'demo@flashleads.com',
-                name: 'Usuário Demo',
-                clinic: 'Clínica Demo',
-                phone: '(11) 99999-9999'
-            };
-            isLoggedIn = true;
+            // Esconder tela de auth e mostrar loading temporariamente
+            showScreen('loading');
             
-            // Dados de exemplo
-            leads = [
-                {
-                    id: Date.now() + 1,
-                    name: "Maria Silva",
-                    phone: "(11) 99999-9999",
-                    procedure: "Clareamento",
-                    date: new Date().toISOString().split('T')[0],
-                    status: "novo",
-                    observations: "Interessada em clareamento a laser"
-                },
-                {
-                    id: Date.now() + 2,
-                    name: "João Santos",
-                    phone: "(11) 88888-8888", 
-                    procedure: "Implante",
-                    date: new Date().toISOString().split('T')[0],
-                    status: "agendado",
-                    observations: "Consulta marcada para próxima semana"
+            setTimeout(() => {
+                // Simular usuário demo
+                currentUser = {
+                    id: 'demo_user',
+                    email: 'demo@flashleads.com',
+                    name: 'Usuário Demo',
+                    clinic: 'Clínica Demo',
+                    phone: '(11) 99999-9999'
+                };
+                isLoggedIn = true;
+                
+                // Dados de exemplo
+                leads = [
+                    {
+                        id: Date.now() + 1,
+                        name: "Maria Silva",
+                        phone: "(11) 99999-9999",
+                        procedure: "Clareamento",
+                        date: new Date().toISOString().split('T')[0],
+                        status: "novo",
+                        observations: "Interessada em clareamento a laser"
+                    },
+                    {
+                        id: Date.now() + 2,
+                        name: "João Santos",
+                        phone: "(11) 88888-8888", 
+                        procedure: "Implante",
+                        date: new Date().toISOString().split('T')[0],
+                        status: "agendado",
+                        observations: "Consulta marcada para próxima semana"
+                    }
+                ];
+                
+                // Configurar event listeners se ainda não foram configurados
+                try {
+                    setupEventListeners();
+                } catch (error) {
+                    console.log('Event listeners já configurados');
                 }
-            ];
-            
-            // Configurar event listeners
-            setupEventListeners();
-            
-            // Mostrar aplicação principal
-            showMainApp();
-            
-            alert('ℹ️ Sistema rodando em modo demonstração.\nAlgumas funcionalidades podem estar limitadas.');
+                
+                // Mostrar aplicação principal
+                showMainApp();
+                
+                alert('ℹ️ Sistema rodando em modo demonstração.\nAlgumas funcionalidades podem estar limitadas.');
+            }, 500);
         }
 
         async function checkExistingSession() {
@@ -1451,7 +1470,36 @@
 
         async function logout() {
             if (confirm('Tem certeza que deseja sair?')) {
-                await supabase.auth.signOut();
+                try {
+                    console.log('🚪 Fazendo logout...');
+                    
+                    // Limpar dados locais primeiro
+                    currentUser = null;
+                    isLoggedIn = false;
+                    leads = [];
+                    
+                    // Se estiver em modo demo, apenas limpar e voltar para auth
+                    if (!supabase || currentUser?.id === 'demo_user') {
+                        console.log('🎯 Saindo do modo demo');
+                        showAuthScreen();
+                        return;
+                    }
+                    
+                    // Tentar fazer logout no Supabase
+                    await supabase.auth.signOut();
+                    console.log('✅ Logout realizado com sucesso');
+                    
+                    // Forçar retorno para tela de login
+                    showAuthScreen();
+                    
+                } catch (error) {
+                    console.error('❌ Erro ao fazer logout:', error);
+                    // Mesmo com erro, força volta para tela de login
+                    currentUser = null;
+                    isLoggedIn = false;
+                    leads = [];
+                    showAuthScreen();
+                }
             }
         }
 
@@ -2340,13 +2388,21 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
             return statusMap[status] || status;
         }
 
-        // === EVENT LISTENERS ===
         function setupEventListeners() {
             // Botões principais
             document.getElementById('addLeadBtn').addEventListener('click', openAddModal);
             document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
             document.getElementById('reportsBtn').addEventListener('click', openReportsModal);
             document.getElementById('refreshBtn').addEventListener('click', refreshSystem);
+            
+            // Botão de logout - garantir que sempre funcione
+            const logoutBtn = document.querySelector('.logout-btn');
+            if (logoutBtn) {
+                // Remover event listeners anteriores
+                logoutBtn.replaceWith(logoutBtn.cloneNode(true));
+                const newLogoutBtn = document.querySelector('.logout-btn');
+                newLogoutBtn.addEventListener('click', logout);
+            }
             
             // Modal
             document.getElementById('closeModalBtn').addEventListener('click', closeModal);
@@ -2443,7 +2499,7 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
             // Password strength
             document.getElementById('registerPassword').addEventListener('input', updatePasswordStrength);
             
-            console.log('Event listeners configurados');
+            console.log('✅ Event listeners configurados');
         }
 
         // === INICIALIZAÇÃO ===
