@@ -1,1429 +1,4 @@
-</div>
-
-        <div class="table-container">
-            <table class="leads-table">
-                <thead>
-                    <tr>
-                        <th>Nome do Paciente</th>
-                        <th>Telefone</th>
-                        <th>Procedimento</th>
-                        <th>Data de Entrada</th>
-                        <th>Status</th>
-                        <th>Observações</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="leadsTableBody">
-                    <tr class="no-leads">
-                        <td colspan="7">
-                            <h3>Nenhum lead encontrado</h3>
-                            <p id="noLeadsMessage">Clique em "Adicionar Novo Lead" para começar</p>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Modal para adicionar/editar lead -->
-    <div id="leadModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">Adicionar Novo Lead</h3>
-                <span class="close" id="closeModalBtn">&times;</span>
-            </div>
-            <form id="leadForm">
-                <div class="form-group">
-                    <label for="patientName">Nome do Paciente *</label>
-                    <input type="text" id="patientName" required>
-                </div>
-                <div class="form-group">
-                    <label for="phone">Telefone *</label>
-                    <input type="tel" id="phone" required>
-                </div>
-                <div class="form-group">
-                    <label for="procedure">Procedimento Desejado *</label>
-                    <select id="procedure" required>
-                        <option value="">Selecione o procedimento</option>
-                        <option value="Limpeza/Profilaxia">Limpeza/Profilaxia</option>
-                        <option value="Clareamento">Clareamento</option>
-                        <option value="Implante">Implante</option>
-                        <option value="Ortodontia">Ortodontia</option>
-                        <option value="Prótese">Prótese</option>
-                        <option value="Endodontia">Endodontia</option>
-                        <option value="Cirurgia">Cirurgia</option>
-                        <option value="Periodontia">Periodontia</option>
-                        <option value="Outros">Outros</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="status">Status do Lead</label>
-                    <select id="status">
-                        <option value="novo">Novo</option>
-                        <option value="em-atendimento">Em atendimento</option>
-                        <option value="agendado">Agendado</option>
-                        <option value="compareceu">Compareceu</option>
-                        <option value="faltou">Faltou</option>
-                        <option value="perdido">Perdido</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="observations">Observações</label>
-                    <textarea id="observations" placeholder="Observações adicionais sobre o lead..."></textarea>
-                </div>
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">💾 Salvar Lead</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <script>
-        // ========================================
-        // CONFIGURAÇÃO DO SUPABASE
-        // ========================================
-        const SUPABASE_CONFIG = {
-            url: 'https://bjqfxroulfxyqhqopnns.supabase.co',
-            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcWZ4cm91bGZ4eXFocW9wbm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNTkzODEsImV4cCI6MjA2ODgzNTM4MX0.7TRJhwzvbHK23rQP2T6azq6c2mVSDPBgfgwadpZxbjg'
-        };
-
-        // === VARIÁVEIS GLOBAIS ===
-        let supabase = null;
-        let currentUser = null;
-        let isLoggedIn = false;
-        let leads = [];
-        let currentEditId = null;
-        let currentPeriodFilter = 'all';
-        let customDateRange = null;
-        let clinicSettings = {
-            name: 'Clínica Odontológica',
-            whatsapp: '',
-            defaultMessage: 'Olá {nome}! 😊\n\nTudo bem? Aqui é da {clinica} 🦷\n\nVi que você tem interesse em {procedimento}. Que tal agendar uma consulta?\n\nTemos horários disponíveis esta semana e condições especiais para você!\n\nPosso te ajudar com mais informações? 📞',
-            procedurePrices: {
-                'Limpeza/Profilaxia': 150,
-                'Clareamento': 800,
-                'Implante': 2500,
-                'Ortodontia': 2000,
-                'Prótese': 1800,
-                'Endodontia': 600,
-                'Cirurgia': 1200,
-                'Periodontia': 400,
-                'Outros': 500
-            },
-            autoReminders: false,
-            reminderDays: 2,
-            receptionWhatsApp: ''
-        };
-
-        // === FUNÇÃO PARA AGUARDAR CARREGAMENTO DO SUPABASE ===
-        function waitForSupabase(callback, attempts = 0) {
-            if (typeof window.supabase !== 'undefined') {
-                console.log('✅ Supabase carregado com sucesso');
-                callback();
-            } else if (attempts < 50) {
-                console.log(`🔄 Aguardando Supabase... tentativa ${attempts + 1}`);
-                setTimeout(() => waitForSupabase(callback, attempts + 1), 100);
-            } else {
-                console.error('❌ Timeout: Supabase não carregou');
-                showError('Erro ao carregar sistema. Recarregue a página.');
-            }
-        }
-
-        // === INICIALIZAÇÃO SEGURA ===
-        function initializeSystem() {
-            try {
-                // Inicializar Supabase
-                supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
-                console.log('✅ Cliente Supabase criado');
-
-                // Verificar se auth existe
-                if (!supabase.auth) {
-                    throw new Error('supabase.auth não está disponível');
-                }
-
-                // Monitorar mudanças de autenticação
-                supabase.auth.onAuthStateChange((event, session) => {
-                    console.log('Auth state changed:', event, session);
-                    
-                    if (event === 'SIGNED_IN' && session) {
-                        currentUser = {
-                            id: session.user.id,
-                            email: session.user.email,
-                            name: session.user.user_metadata.name || session.user.email,
-                            clinic: session.user.user_metadata.clinic || 'Minha Clínica',
-                            phone: session.user.user_metadata.phone || ''
-                        };
-                        isLoggedIn = true;
-                        showMainApp();
-                    } else if (event === 'SIGNED_OUT') {
-                        currentUser = null;
-                        isLoggedIn = false;
-                        showAuthScreen();
-                    }
-                });
-
-                // Verificar sessão existente
-                checkExistingSession();
-
-                // Configurar event listeners
-                setupEventListeners();
-
-                console.log('✅ Sistema inicializado com sucesso');
-
-            } catch (error) {
-                console.error('❌ Erro na inicialização:', error);
-                showError(`Erro de inicialização: ${error.message}`);
-            }
-        }
-
-        // === FUNÇÕES DE ARMAZENAMENTO SUPABASE ===
-        async function saveLeadsToSupabase() {
-            if (!currentUser || !supabase) return;
-            
-            try {
-                const { error } = await supabase
-                    .from('user_leads')
-                    .upsert({
-                        user_id: currentUser.id,
-                        leads_data: JSON.stringify(leads),
-                        updated_at: new Date().toISOString()
-                    });
-                    
-                if (error) throw error;
-                console.log('✅ Leads salvos no Supabase');
-            } catch (error) {
-                console.error('❌ Erro ao salvar leads:', error);
-                // Fallback para localStorage
-                localStorage.setItem(`flashleads_leads_${currentUser.id}`, JSON.stringify(leads));
-            }
-        }
-
-        async function loadLeadsFromSupabase() {
-            if (!currentUser || !supabase) return [];
-            
-            try {
-                const { data, error } = await supabase
-                    .from('user_leads')
-                    .select('leads_data')
-                    .eq('user_id', currentUser.id)
-                    .single();
-                    
-                if (error && error.code !== 'PGRST116') throw error;
-                
-                if (data && data.leads_data) {
-                    return JSON.parse(data.leads_data);
-                }
-                
-                return [];
-            } catch (error) {
-                console.error('❌ Erro ao carregar leads:', error);
-                // Fallback para localStorage
-                const saved = localStorage.getItem(`flashleads_leads_${currentUser.id}`);
-                return saved ? JSON.parse(saved) : [];
-            }
-        }
-
-        function saveLeads() {
-            if (!currentUser) return;
-            
-            // Salvar no Supabase
-            saveLeadsToSupabase();
-            
-            // Manter localStorage como backup
-            localStorage.setItem(`flashleads_leads_${currentUser.id}`, JSON.stringify(leads));
-            console.log('Leads salvos:', leads.length);
-        }
-
-        async function loadLeads() {
-            if (!currentUser) {
-                console.log('Usuário não logado, não carregando leads');
-                return;
-            }
-            
-            console.log('Carregando leads para usuário:', currentUser.email);
-            
-            // Carregar do Supabase
-            const supabaseLeads = await loadLeadsFromSupabase();
-            
-            if (supabaseLeads.length > 0) {
-                leads = supabaseLeads;
-                console.log('Leads carregados do Supabase:', leads.length);
-            } else {
-                // Dados de exemplo para novo usuário
-                leads = [
-                    {
-                        id: Date.now() + 1,
-                        name: "Maria Silva",
-                        phone: "(11) 99999-9999",
-                        procedure: "Clareamento",
-                        date: new Date().toISOString().split('T')[0],
-                        status: "novo",
-                        observations: "Interessada em clareamento a laser"
-                    },
-                    {
-                        id: Date.now() + 2,
-                        name: "João Santos",
-                        phone: "(11) 88888-8888",
-                        procedure: "Implante",
-                        date: new Date().toISOString().split('T')[0],
-                        status: "agendado",
-                        observations: "Consulta marcada para próxima semana"
-                    }
-                ];
-                saveLeads();
-                console.log('Dados de exemplo criados para novo usuário');
-            }
-            
-            // Carregar configurações específicas do usuário
-            const userSettingsKey = `flashleads_settings_${currentUser.id}`;
-            const savedSettings = localStorage.getItem(userSettingsKey);
-            if (savedSettings) {
-                clinicSettings = { ...clinicSettings, ...JSON.parse(savedSettings) };
-            } else {
-                // Usar dados do cadastro como configuração inicial
-                clinicSettings.name = currentUser.clinic;
-                clinicSettings.whatsapp = currentUser.phone;
-                saveSettings();
-            }
-            
-            // Renderizar apenas se estivermos na tela principal
-            if (document.getElementById('mainContainer').style.display === 'block') {
-                renderLeads();
-                updateStats();
-            }
-        }
-
-        function saveSettings() {
-            if (!currentUser) return;
-            const userSettingsKey = `flashleads_settings_${currentUser.id}`;
-            localStorage.setItem(userSettingsKey, JSON.stringify(clinicSettings));
-            console.log('Configurações salvas');
-        }
-
-        // === FUNÇÕES DE INTERFACE ===
-        function hideLoadingScreen() {
-            const loadingScreen = document.getElementById('loadingScreen');
-            if (loadingScreen) {
-                loadingScreen.style.display = 'none';
-            }
-        }
-
-        function showAuthScreen() {
-            console.log('Mostrando tela de autenticação');
-            hideLoadingScreen();
-            
-            // Garantir que o sistema principal esteja completamente oculto
-            document.getElementById('mainContainer').style.display = 'none';
-            document.getElementById('authContainer').style.display = 'flex';
-            
-            // Limpar dados de usuário
-            currentUser = null;
-            isLoggedIn = false;
-            leads = [];
-        }
-
-        function showMainApp() {
-            console.log('Mostrando aplicação principal');
-            hideLoadingScreen();
-            
-            // Ocultar completamente a tela de autenticação
-            document.getElementById('authContainer').style.display = 'none';
-            document.getElementById('mainContainer').style.display = 'block';
-            
-            // Carregar dados quando mostrar o app principal
-            if (currentUser) {
-                loadLeads();
-            }
-        }
-
-        function showError(message) {
-            hideLoadingScreen();
-            alert(`❌ ${message}`);
-        }
-
-        async function checkExistingSession() {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                
-                if (session && session.user) {
-                    currentUser = {
-                        id: session.user.id,
-                        email: session.user.email,
-                        name: session.user.user_metadata.name || session.user.email,
-                        clinic: session.user.user_metadata.clinic || 'Minha Clínica',
-                        phone: session.user.user_metadata.phone || ''
-                    };
-                    isLoggedIn = true;
-                    showMainApp();
-                } else {
-                    showAuthScreen();
-                }
-            } catch (error) {
-                console.error('Erro ao verificar sessão:', error);
-                showAuthScreen();
-            }
-        }
-
-        // === FUNÇÕES DE AUTENTICAÇÃO ===
-        async function apiLogin(email, password) {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password
-            });
-            
-            if (error) throw new Error(error.message);
-            
-            if (!data.user.email_confirmed_at) {
-                throw new Error('Por favor, confirme seu e-mail antes de fazer login.');
-            }
-            
-            return data.user;
-        }
-
-        async function apiRegister(userData) {
-            const { data, error } = await supabase.auth.signUp({
-                email: userData.email,
-                password: userData.password,
-                options: {
-                    data: {
-                        name: userData.name,
-                        clinic: userData.clinic,
-                        phone: userData.phone
-                    }
-                }
-            });
-            
-            if (error) throw new Error(error.message);
-            return data.user;
-        }
-
-        async function logout() {
-            if (confirm('Tem certeza que deseja sair?')) {
-                await supabase.auth.signOut();
-            }
-        }
-
-        // === FUNÇÕES DE INTERFACE DE AUTENTICAÇÃO ===
-        function switchAuthTab(tab) {
-            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-            document.querySelector(`[onclick="switchAuthTab('${tab}')"]`).classList.add('active');
-            
-            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-            document.getElementById(tab + 'Form').classList.add('active');
-            
-            hideAuthAlert();
-        }
-
-        function showAuthAlert(message, type = 'info') {
-            const alert = document.getElementById('authAlert');
-            alert.className = `auth-alert ${type}`;
-            alert.textContent = message;
-            alert.style.display = 'block';
-            
-            if (type === 'success') {
-                setTimeout(() => hideAuthAlert(), 5000);
-            }
-        }
-
-        function hideAuthAlert() {
-            document.getElementById('authAlert').style.display = 'none';
-        }
-
-        function setButtonLoading(buttonId, loading) {
-            const btn = document.getElementById(buttonId);
-            const spinner = btn.querySelector('.loading-spinner-small');
-            const text = btn.querySelector('span');
-            
-            if (loading) {
-                btn.disabled = true;
-                spinner.style.display = 'inline-block';
-                text.textContent = 'Processando...';
-            } else {
-                btn.disabled = false;
-                spinner.style.display = 'none';
-                text.textContent = buttonId === 'loginBtn' ? 'Entrar' : 'Criar Conta';
-            }
-        }
-
-        function validateEmail(email) {
-            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-        }
-
-        function updatePasswordStrength() {
-            const password = document.getElementById('registerPassword').value;
-            const strengthFill = document.getElementById('strengthFill');
-            const strengthText = document.getElementById('strengthText');
-            
-            if (!password) {
-                strengthFill.className = 'strength-fill';
-                strengthText.textContent = '';
-                return;
-            }
-            
-            let score = 0;
-            if (password.length >= 6) score += 25;
-            if (password.length >= 8) score += 25;
-            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 25;
-            if (/\d/.test(password)) score += 25;
-            
-            let className, text;
-            if (score < 50) {
-                className = 'strength-weak';
-                text = 'Fraca';
-            } else if (score < 75) {
-                className = 'strength-fair';
-                text = 'Razoável';
-            } else if (score < 100) {
-                className = 'strength-good';
-                text = 'Boa';
-            } else {
-                className = 'strength-strong';
-                text = 'Forte';
-            }
-            
-            strengthFill.className = `strength-fill ${className}`;
-            strengthText.textContent = `Força da senha: ${text}`;
-        }
-
-        function showForgotPassword() {
-            showAuthAlert('Use a função "Esqueci minha senha" do Supabase Authentication.', 'info');
-        }
-
-        // === SISTEMA DE LEADS ===
-        function renderLeads(filteredLeads = null) {
-            const tbody = document.getElementById('leadsTableBody');
-            const leadsToRender = filteredLeads || leads;
-            
-            if (leadsToRender.length === 0) {
-                let message = 'Clique em "Adicionar Novo Lead" para começar';
-                
-                if (filteredLeads !== null && leads.length > 0) {
-                    if (currentPeriodFilter !== 'all') {
-                        const periodNames = {
-                            'today': 'hoje',
-                            'week': 'nesta semana',
-                            'month': 'neste mês',
-                            'quarter': 'neste trimestre',
-                            'custom': 'no período selecionado'
-                        };
-                        message = `Nenhum lead encontrado ${periodNames[currentPeriodFilter] || 'no período selecionado'}`;
-                    } else {
-                        message = 'Nenhum lead encontrado com os filtros aplicados';
-                    }
-                }
-                
-                tbody.innerHTML = `
-                    <tr class="no-leads">
-                        <td colspan="7">
-                            <h3>Nenhum lead encontrado</h3>
-                            <p>${message}</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            tbody.innerHTML = leadsToRender.map(lead => `
-                <tr>
-                    <td><strong>${lead.name}</strong></td>
-                    <td>${lead.phone}</td>
-                    <td>${lead.procedure}</td>
-                    <td>${formatDate(lead.date)}</td>
-                    <td><span class="status-badge status-${lead.status}">${getStatusText(lead.status)}</span></td>
-                    <td>${lead.observations || '-'}</td>
-                    <td>
-                        <div class="actions">
-                            <button class="btn btn-success" onclick="markAsScheduled(${lead.id})" title="Agendar">
-                                📅
-                            </button>
-                            <button class="btn btn-info" onclick="sendReminder(${lead.id})" title="WhatsApp">
-                                💬
-                            </button>
-                            ${lead.status === 'agendado' ? `
-                                <button class="btn btn-success" onclick="markAttendance(${lead.id}, 'compareceu')" title="Compareceu" style="background: linear-gradient(135deg, #27ae60, #229954);">
-                                    ✅
-                                </button>
-                                <button class="btn btn-danger" onclick="markAttendance(${lead.id}, 'faltou')" title="Faltou" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
-                                    ❌
-                                </button>
-                            ` : ''}
-                            <button class="btn btn-warning" onclick="editLead(${lead.id})" title="Editar">
-                                ✏️
-                            </button>
-                            <button class="btn btn-danger" onclick="deleteLead(${lead.id})" title="Excluir">
-                                🗑️
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-            
-            console.log('Leads renderizados:', leadsToRender.length);
-        }
-
-        function updateStats() {
-            const total = leads.length;
-            const novos = leads.filter(lead => lead.status === 'novo').length;
-            const agendados = leads.filter(lead => lead.status === 'agendado').length;
-            const compareceu = leads.filter(lead => lead.status === 'compareceu').length;
-            const faltou = leads.filter(lead => lead.status === 'faltou').length;
-            
-            const leadsProcessados = leads.filter(lead => ['agendado', 'compareceu', 'faltou'].includes(lead.status)).length;
-            const taxaAgendamento = total > 0 ? Math.round((leadsProcessados / total) * 100) : 0;
-            
-            const totalConsultas = compareceu + faltou;
-            const taxaComparecimento = totalConsultas > 0 ? Math.round((compareceu / totalConsultas) * 100) : 0;
-            
-            const currentMonth = new Date().getMonth();
-            const currentYear = new Date().getFullYear();
-            const leadsMes = leads.filter(lead => {
-                const leadDate = new Date(lead.date);
-                return leadDate.getMonth() === currentMonth && leadDate.getFullYear() === currentYear;
-            }).length;
-
-            const elements = {
-                'totalLeads': total,
-                'novosLeads': novos,
-                'agendadosLeads': agendados,
-                'compareceuLeads': compareceu,
-                'faltouLeads': faltou,
-                'taxaAgendamento': taxaAgendamento + '%',
-                'taxaComparecimento': taxaComparecimento + '%',
-                'leadsMes': leadsMes
-            };
-
-            Object.entries(elements).forEach(([id, value]) => {
-                const element = document.getElementById(id);
-                if (element) {
-                    element.textContent = value;
-                }
-            });
-        }
-
-        function filterLeads() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const statusFilter = document.getElementById('statusFilter').value;
-            
-            let filtered = leads.filter(lead => {
-                const matchesSearch = lead.name.toLowerCase().includes(searchTerm) || 
-                                    lead.phone.includes(searchTerm);
-                const matchesStatus = !statusFilter || lead.status === statusFilter;
-                return matchesSearch && matchesStatus;
-            });
-            
-            filtered = applyPeriodFilter(filtered);
-            renderLeads(filtered);
-            updateFilteredStats(filtered);
-        }
-
-        function applyPeriodFilter(leadsArray) {
-            if (currentPeriodFilter === 'all') {
-                return leadsArray;
-            }
-            
-            if (currentPeriodFilter === 'custom' && customDateRange) {
-                return leadsArray.filter(lead => {
-                    const leadDate = new Date(lead.date);
-                    return leadDate >= customDateRange.start && leadDate <= customDateRange.end;
-                });
-            }
-            
-            const now = new Date();
-            let startDate;
-            
-            switch(currentPeriodFilter) {
-                case 'today':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    break;
-                case 'week':
-                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    break;
-                case 'month':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                    break;
-                case 'quarter':
-                    startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-                    break;
-                default:
-                    return leadsArray;
-            }
-            
-            return leadsArray.filter(lead => new Date(lead.date) >= startDate);
-        }
-
-        function filterByPeriod(period) {
-            currentPeriodFilter = period;
-            customDateRange = null;
-            
-            document.querySelectorAll('.period-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelector(`[data-period="${period}"]`).classList.add('active');
-            
-            if (period !== 'custom') {
-                document.getElementById('customPeriodContainer').style.display = 'none';
-            }
-            
-            filterLeads();
-        }
-
-        function toggleCustomPeriod() {
-            const container = document.getElementById('customPeriodContainer');
-            const isVisible = container.style.display !== 'none';
-            
-            if (isVisible) {
-                container.style.display = 'none';
-                filterByPeriod('all');
-            } else {
-                container.style.display = 'block';
-                
-                const today = new Date().toISOString().split('T')[0];
-                const firstDayMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-                
-                document.getElementById('customStartDate').value = firstDayMonth;
-                document.getElementById('customEndDate').value = today;
-                
-                document.querySelectorAll('.period-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                document.querySelector('[data-period="custom"]').classList.add('active');
-            }
-        }
-
-        function applyCustomPeriod() {
-            const startDate = document.getElementById('customStartDate').value;
-            const endDate = document.getElementById('customEndDate').value;
-            
-            if (!startDate || !endDate) {
-                alert('Por favor, selecione as datas de início e fim!');
-                return;
-            }
-            
-            if (new Date(startDate) > new Date(endDate)) {
-                alert('A data de início deve ser anterior à data de fim!');
-                return;
-            }
-            
-            customDateRange = {
-                start: new Date(startDate),
-                end: new Date(endDate)
-            };
-            
-            currentPeriodFilter = 'custom';
-            filterLeads();
-        }
-
-        function clearCustomPeriod() {
-            document.getElementById('customStartDate').value = '';
-            document.getElementById('customEndDate').value = '';
-            document.getElementById('customPeriodContainer').style.display = 'none';
-            filterByPeriod('all');
-        }
-
-        function updateFilteredStats(filteredLeads) {
-            const total = filteredLeads.length;
-            const novos = filteredLeads.filter(lead => lead.status === 'novo').length;
-            const agendados = filteredLeads.filter(lead => lead.status === 'agendado').length;
-            const compareceu = filteredLeads.filter(lead => lead.status === 'compareceu').length;
-            const faltou = filteredLeads.filter(lead => lead.status === 'faltou').length;
-            
-            const leadsProcessados = filteredLeads.filter(lead => ['agendado', 'compareceu', 'faltou'].includes(lead.status)).length;
-            const taxaAgendamento = total > 0 ? Math.round((leadsProcessados / total) * 100) : 0;
-            
-            const totalConsultas = compareceu + faltou;
-            const taxaComparecimento = totalConsultas > 0 ? Math.round((compareceu / totalConsultas) * 100) : 0;
-            
-            const currentMonth = new Date().getMonth();
-            const currentYear = new Date().getFullYear();
-            let leadsPeriodo;
-            
-            if (currentPeriodFilter === 'all') {
-                leadsPeriodo = leads.filter(lead => {
-                    const leadDate = new Date(lead.date);
-                    return leadDate.getMonth() === currentMonth && leadDate.getFullYear() === currentYear;
-                }).length;
-            } else {
-                leadsPeriodo = total;
-            }
-
-            document.getElementById('totalLeads').textContent = total;
-            document.getElementById('novosLeads').textContent = novos;
-            document.getElementById('agendadosLeads').textContent = agendados;
-            document.getElementById('compareceuLeads').textContent = compareceu;
-            document.getElementById('faltouLeads').textContent = faltou;
-            document.getElementById('taxaAgendamento').textContent = taxaAgendamento + '%';
-            document.getElementById('taxaComparecimento').textContent = taxaComparecimento + '%';
-            document.getElementById('leadsMes').textContent = leadsPeriodo;
-        }
-
-        function openAddModal() {
-            currentEditId = null;
-            document.getElementById('modalTitle').textContent = 'Adicionar Novo Lead';
-            document.getElementById('leadForm').reset();
-            document.getElementById('leadModal').style.display = 'block';
-        }
-
-        function editLead(id) {
-            const lead = leads.find(l => l.id === id);
-            if (!lead) return;
-            
-            currentEditId = id;
-            document.getElementById('modalTitle').textContent = 'Editar Lead';
-            document.getElementById('patientName').value = lead.name;
-            document.getElementById('phone').value = lead.phone;
-            document.getElementById('procedure').value = lead.procedure;
-            document.getElementById('status').value = lead.status;
-            document.getElementById('observations').value = lead.observations || '';
-            
-            document.getElementById('leadModal').style.display = 'block';
-        }
-
-        function closeModal() {
-            document.getElementById('leadModal').style.display = 'none';
-            currentEditId = null;
-        }
-
-        function handleFormSubmit(e) {
-            e.preventDefault();
-            
-            const formData = {
-                name: document.getElementById('patientName').value,
-                phone: document.getElementById('phone').value,
-                procedure: document.getElementById('procedure').value,
-                status: document.getElementById('status').value,
-                observations: document.getElementById('observations').value
-            };
-            
-            if (currentEditId) {
-                const index = leads.findIndex(l => l.id === currentEditId);
-                leads[index] = { ...leads[index], ...formData };
-            } else {
-                const newLead = {
-                    id: Date.now(),
-                    date: new Date().toISOString().split('T')[0],
-                    ...formData
-                };
-                leads.push(newLead);
-            }
-            
-            saveLeads();
-            renderLeads();
-            updateStats();
-            closeModal();
-            
-            document.getElementById('searchInput').value = '';
-            document.getElementById('statusFilter').value = '';
-            filterByPeriod('all');
-        }
-
-        function markAsScheduled(id) {
-            const lead = leads.find(l => l.id === id);
-            if (!lead) return;
-            
-            openGoogleScheduleModal(lead);
-        }
-
-        function openGoogleScheduleModal(lead) {
-            const modal = document.createElement('div');
-            modal.className = 'modal';
-            modal.style.display = 'block';
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3>📅 Agendar no Google Agenda</h3>
-                        <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
-                    </div>
-                    <div style="padding: 20px;">
-                        <div class="form-group">
-                            <label><strong>Paciente:</strong> ${lead.name}</label>
-                            <label><strong>Telefone:</strong> ${lead.phone}</label>
-                            <label><strong>Procedimento:</strong> ${lead.procedure}</label>
-                        </div>
-                        <div class="form-group">
-                            <label>Data da Consulta: *</label>
-                            <input type="date" id="scheduleDate" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; margin-top: 8px;" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Horário: *</label>
-                            <input type="time" id="scheduleTime" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; margin-top: 8px;" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Duração:</label>
-                            <select id="scheduleDuration" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; margin-top: 8px;">
-                                <option value="30">30 minutos</option>
-                                <option value="60" selected>1 hora</option>
-                                <option value="90">1h 30min</option>
-                                <option value="120">2 horas</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Local da consulta:</label>
-                            <input type="text" id="scheduleLocation" placeholder="Endereço da clínica" value="${clinicSettings.name}" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; margin-top: 8px;">
-                        </div>
-                        <div class="form-group">
-                            <label>Observações do agendamento:</label>
-                            <textarea id="scheduleNotes" placeholder="Ex: Primeira consulta, trazer documentos, exames..." style="width: 100%; height: 80px; padding: 10px; border: 2px solid #ddd; border-radius: 8px; margin-top: 8px; resize: vertical;"></textarea>
-                        </div>
-                        <div class="form-group" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button id="createGoogleBtn" class="btn btn-success" style="flex: 1; padding: 15px; font-size: 16px;">
-                                📅 Criar no Google Agenda
-                            </button>
-                            <button id="scheduleOnlyBtn" class="btn btn-warning" style="flex: 1; padding: 15px; font-size: 16px;">
-                                ✅ Apenas Marcar Agendado
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            
-            const today = new Date().toISOString().split('T')[0];
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const tomorrowDate = tomorrow.toISOString().split('T')[0];
-            
-            document.getElementById('scheduleDate').min = today;
-            document.getElementById('scheduleDate').value = tomorrowDate;
-            document.getElementById('scheduleTime').value = '14:00';
-            
-            document.getElementById('createGoogleBtn').addEventListener('click', function() {
-                createGoogleCalendarEvent(lead.id);
-            });
-            
-            document.getElementById('scheduleOnlyBtn').addEventListener('click', function() {
-                scheduleOnlyQuick(lead.id);
-            });
-        }
-
-        function createGoogleCalendarEvent(leadId) {
-            const lead = leads.find(l => l.id === leadId);
-            if (!lead) return;
-            
-            const date = document.getElementById('scheduleDate').value;
-            const time = document.getElementById('scheduleTime').value;
-            const duration = parseInt(document.getElementById('scheduleDuration').value);
-            const location = document.getElementById('scheduleLocation').value;
-            const notes = document.getElementById('scheduleNotes').value;
-            
-            if (!date || !time) {
-                alert('⚠️ Por favor, preencha data e horário!');
-                return;
-            }
-            
-            try {
-                const startDateTime = new Date(`${date}T${time}`);
-                const endDateTime = new Date(startDateTime.getTime() + (duration * 60000));
-                
-                if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
-                    alert('⚠️ Data ou horário inválidos!');
-                    return;
-                }
-                
-                const startFormatted = startDateTime.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                const endFormatted = endDateTime.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                
-                const eventTitle = `Consulta: ${lead.name} - ${lead.procedure}`;
-                const eventDescription = `📋 DETALHES DA CONSULTA
-
-Paciente: ${lead.name}
-Telefone: ${lead.phone}
-Procedimento: ${lead.procedure}
-Lead desde: ${formatDate(lead.date)}
-
-${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
-                
-                const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE` +
-                    `&text=${encodeURIComponent(eventTitle)}` +
-                    `&dates=${startFormatted}/${endFormatted}` +
-                    `&details=${encodeURIComponent(eventDescription)}` +
-                    `&location=${encodeURIComponent(location || '')}` +
-                    `&sf=true&output=xml`;
-                
-                lead.status = 'agendado';
-                lead.appointmentDate = date;
-                lead.appointmentTime = time;
-                lead.appointmentDuration = duration;
-                lead.appointmentLocation = location;
-                lead.observations = (lead.observations || '') + `\n[${new Date().toLocaleString()}] 📅 Agendado para ${formatDate(date)} às ${time} (${duration}min)${notes ? ' - ' + notes : ''}`;
-                
-                saveLeads();
-                renderLeads();
-                updateStats();
-                
-                window.open(calendarUrl, '_blank');
-                
-                const modal = document.querySelector('.modal');
-                if (modal && modal !== document.getElementById('leadModal')) {
-                    modal.remove();
-                }
-                
-                showNotification(`✅ Evento criado no Google Agenda para ${lead.name}!`);
-                
-            } catch (error) {
-                console.error('❌ Erro ao criar evento:', error);
-                alert('❌ Erro ao criar evento no Google Agenda!');
-            }
-        }
-
-        function scheduleOnlyQuick(leadId) {
-            const lead = leads.find(l => l.id === leadId);
-            if (!lead) return;
-            
-            const date = document.getElementById('scheduleDate').value;
-            const time = document.getElementById('scheduleTime').value;
-            const duration = document.getElementById('scheduleDuration').value;
-            const notes = document.getElementById('scheduleNotes').value;
-            
-            if (!date || !time) {
-                alert('⚠️ Por favor, preencha pelo menos data e horário!');
-                return;
-            }
-            
-            try {
-                lead.status = 'agendado';
-                lead.appointmentDate = date;
-                lead.appointmentTime = time;
-                lead.appointmentDuration = duration;
-                lead.observations = (lead.observations || '') + `\n[${new Date().toLocaleString()}] ✅ Marcado como agendado para ${formatDate(date)} às ${time}${notes ? ' - ' + notes : ''}`;
-                
-                saveLeads();
-                renderLeads();
-                updateStats();
-                
-                const modal = document.querySelector('.modal');
-                if (modal && modal !== document.getElementById('leadModal')) {
-                    modal.remove();
-                }
-                
-                showNotification(`✅ ${lead.name} marcado como agendado!`);
-                
-            } catch (error) {
-                console.error('❌ Erro ao marcar agendamento:', error);
-                alert('❌ Erro ao marcar lead como agendado!');
-            }
-        }
-
-        function refreshSystem() {
-            const refreshBtn = document.getElementById('refreshBtn');
-            const originalText = refreshBtn.innerHTML;
-            refreshBtn.innerHTML = '⏳ Atualizando...';
-            refreshBtn.disabled = true;
-            refreshBtn.style.opacity = '0.7';
-            
-            setTimeout(() => {
-                try {
-                    loadLeads();
-                    
-                    document.getElementById('searchInput').value = '';
-                    document.getElementById('statusFilter').value = '';
-                    
-                    currentPeriodFilter = 'all';
-                    customDateRange = null;
-                    document.getElementById('customPeriodContainer').style.display = 'none';
-                    
-                    document.querySelectorAll('.period-btn').forEach(btn => {
-                        btn.classList.remove('active');
-                    });
-                    document.querySelector('[data-period="all"]').classList.add('active');
-                    
-                    renderLeads();
-                    updateStats();
-                    
-                } catch (error) {
-                    console.error('❌ Erro durante atualização:', error);
-                    showNotification('❌ Erro ao atualizar sistema!');
-                } finally {
-                    refreshBtn.innerHTML = originalText;
-                    refreshBtn.disabled = false;
-                    refreshBtn.style.opacity = '1';
-                    
-                    showNotification('✅ Sistema atualizado com sucesso!');
-                }
-            }, 800);
-        }
-
-        function showNotification(message) {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: linear-gradient(135deg, #27ae60, #229954);
-                color: white;
-                padding: 15px 25px;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                z-index: 2000;
-                font-weight: 500;
-                transform: translateX(100%);
-                transition: transform 0.3s ease;
-            `;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.transform = 'translateX(0)';
-            }, 100);
-            
-            setTimeout(() => {
-                notification.style.transform = 'translateX(100%)';
-                setTimeout(() => {
-                    document.body.removeChild(notification);
-                }, 300);
-            }, 3000);
-        }
-
-        function markAttendance(id, status) {
-            const lead = leads.find(l => l.id === id);
-            if (!lead) return;
-            
-            const statusText = status === 'compareceu' ? 'compareceu à consulta' : 'faltou à consulta';
-            const emoji = status === 'compareceu' ? '✅' : '❌';
-            
-            if (confirm(`Confirmar que ${lead.name} ${statusText}?`)) {
-                try {
-                    lead.status = status;
-                    lead.attendanceDate = new Date().toISOString().split('T')[0];
-                    lead.attendanceTime = new Date().toLocaleTimeString();
-                    lead.observations = (lead.observations || '') + `\n[${new Date().toLocaleString()}] ${emoji} ${statusText.charAt(0).toUpperCase() + statusText.slice(1)}`;
-                    
-                    saveLeads();
-                    renderLeads();
-                    updateStats();
-                    
-                    showNotification(`${emoji} ${lead.name} ${statusText}!`);
-                    
-                } catch (error) {
-                    console.error('❌ Erro ao marcar comparecimento:', error);
-                    alert('❌ Erro ao registrar comparecimento!');
-                }
-            }
-        }
-
-        function sendReminder(id) {
-            const lead = leads.find(l => l.id === id);
-            if (!lead) return;
-            
-            const personalizedMessage = clinicSettings.defaultMessage
-                .replace('{nome}', lead.name)
-                .replace('{clinica}', clinicSettings.name)
-                .replace('{procedimento}', lead.procedure);
-            
-            const cleanPhone = lead.phone.replace(/\D/g, '');
-            const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone;
-            const encodedMessage = encodeURIComponent(personalizedMessage);
-            const whatsappURL = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
-            
-            window.open(whatsappURL, '_blank');
-            
-            lead.status = 'em-atendimento';
-            lead.lastContact = new Date().toISOString();
-            lead.observations = (lead.observations || '') + `\n[${new Date().toLocaleString()}] Mensagem enviada via WhatsApp`;
-            
-            saveLeads();
-            renderLeads();
-            updateStats();
-            
-            alert(`✅ WhatsApp aberto para ${lead.name}!\n\nO status do lead foi atualizado para "Em Atendimento".`);
-        }
-
-        function deleteLead(id) {
-            const lead = leads.find(l => l.id === id);
-            if (!lead) return;
-            
-            if (confirm(`Tem certeza que deseja excluir o lead de ${lead.name}?`)) {
-                leads = leads.filter(l => l.id !== id);
-                saveLeads();
-                renderLeads();
-                updateStats();
-                filterLeads();
-            }
-        }
-
-        function openSettingsModal() {
-            const modal = createModal('⚙️ Configurações da Clínica', `
-                <div style="padding: 20px;">
-                    <div class="form-group">
-                        <label><strong>Nome da Clínica:</strong></label>
-                        <input type="text" id="clinicName" value="${clinicSettings.name}" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; margin-top: 8px;">
-                    </div>
-                    <div class="form-group">
-                        <label><strong>WhatsApp da Clínica (opcional):</strong></label>
-                        <input type="tel" id="clinicWhatsApp" placeholder="(11) 99999-9999" value="${clinicSettings.whatsapp}" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; margin-top: 8px;">
-                    </div>
-                    <div class="form-group">
-                        <label><strong>Mensagem Padrão:</strong></label>
-                        <textarea id="defaultMessage" style="width: 100%; height: 120px; padding: 10px; border: 2px solid #ddd; border-radius: 8px; margin-top: 8px; resize: vertical;">${clinicSettings.defaultMessage}</textarea>
-                        <small style="color: #666; font-size: 12px;">Use: {nome}, {clinica}, {procedimento} para personalizar</small>
-                    </div>
-                    <div class="form-group">
-                        <button onclick="saveSettingsModal()" class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 16px;">
-                            💾 Salvar Configurações
-                        </button>
-                    </div>
-                </div>
-            `);
-        }
-
-        function saveSettingsModal() {
-            clinicSettings.name = document.getElementById('clinicName').value;
-            clinicSettings.whatsapp = document.getElementById('clinicWhatsApp').value;
-            clinicSettings.defaultMessage = document.getElementById('defaultMessage').value;
-            
-            saveSettings();
-            removeModal();
-            alert('✅ Configurações salvas com sucesso!');
-        }
-
-        function openReportsModal() {
-            const modal = createModal('📊 Relatórios e Análises', `
-                <div style="padding: 20px;">
-                    <div class="form-group">
-                        <label><strong>Período para Análise:</strong></label>
-                        <div style="display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap;">
-                            <button onclick="generateReport('today')" class="btn btn-info">Hoje</button>
-                            <button onclick="generateReport('week')" class="btn btn-info">Esta Semana</button>
-                            <button onclick="generateReport('month')" class="btn btn-info">Este Mês</button>
-                            <button onclick="generateReport('all')" class="btn btn-info">Todos</button>
-                        </div>
-                    </div>
-                    <div id="reportResults" style="margin-top: 20px;">
-                        <p style="text-align: center; color: #666;">Selecione um período acima para gerar o relatório</p>
-                    </div>
-                </div>
-            `, '800px');
-        }
-
-        function generateReport(period) {
-            let filteredLeads = [];
-            const now = new Date();
-            
-            switch(period) {
-                case 'today':
-                    const today = now.toISOString().split('T')[0];
-                    filteredLeads = leads.filter(lead => lead.date === today);
-                    break;
-                case 'week':
-                    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    filteredLeads = leads.filter(lead => new Date(lead.date) >= weekAgo);
-                    break;
-                case 'month':
-                    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-                    filteredLeads = leads.filter(lead => new Date(lead.date) >= monthStart);
-                    break;
-                case 'all':
-                    filteredLeads = leads;
-                    break;
-            }
-            
-            displayReport(filteredLeads, period);
-        }
-
-        function displayReport(filteredLeads, period) {
-            const total = filteredLeads.length;
-            const novos = filteredLeads.filter(lead => lead.status === 'novo').length;
-            const agendados = filteredLeads.filter(lead => lead.status === 'agendado').length;
-            
-            const taxaAgendamento = total > 0 ? ((agendados / total) * 100).toFixed(1) : 0;
-            
-            const reportHTML = `
-                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
-                    <h4 style="margin-bottom: 15px; color: #2c3e50;">📊 Relatório: ${period}</h4>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
-                        <div style="background: white; padding: 15px; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 2em; font-weight: bold; color: #3498db;">${total}</div>
-                            <div style="color: #666;">Total de Leads</div>
-                        </div>
-                        <div style="background: white; padding: 15px; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 2em; font-weight: bold; color: #27ae60;">${taxaAgendamento}%</div>
-                            <div style="color: #666;">Taxa de Agendamento</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('reportResults').innerHTML = reportHTML;
-        }
-
-        function createModal(title, content, maxWidth = '500px') {
-            const modal = document.createElement('div');
-            modal.className = 'modal';
-            modal.style.display = 'block';
-            modal.innerHTML = `
-                <div class="modal-content" style="max-width: ${maxWidth};">
-                    <div class="modal-header">
-                        <h3>${title}</h3>
-                        <span class="close" onclick="removeModal()">&times;</span>
-                    </div>
-                    ${content}
-                </div>
-            `;
-            document.body.appendChild(modal);
-            return modal;
-        }
-
-        function removeModal() {
-            const modals = document.querySelectorAll('.modal');
-            modals.forEach(modal => {
-                if (modal.id !== 'leadModal') {
-                    modal.remove();
-                }
-            });
-        }
-
-        function formatDate(dateString) {
-            return new Date(dateString).toLocaleDateString('pt-BR');
-        }
-
-        function getStatusText(status) {
-            const statusMap = {
-                'novo': 'Novo',
-                'em-atendimento': 'Em Atendimento',
-                'agendado': 'Agendado',
-                'compareceu': 'Compareceu',
-                'faltou': 'Faltou',
-                'perdido': 'Perdido'
-            };
-            return statusMap[status] || status;
-        }
-
-        // === EVENT LISTENERS ===
-        function setupEventListeners() {
-            // Botões principais
-            document.getElementById('addLeadBtn').addEventListener('click', openAddModal);
-            document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
-            document.getElementById('reportsBtn').addEventListener('click', openReportsModal);
-            document.getElementById('refreshBtn').addEventListener('click', refreshSystem);
-            
-            // Modal
-            document.getElementById('closeModalBtn').addEventListener('click', closeModal);
-            document.getElementById('leadForm').addEventListener('submit', handleFormSubmit);
-            
-            // Busca e filtros
-            document.getElementById('searchInput').addEventListener('input', filterLeads);
-            document.getElementById('statusFilter').addEventListener('change', filterLeads);
-            
-            // Fechar modal clicando fora
-            window.addEventListener('click', function(event) {
-                const modal = document.getElementById('leadModal');
-                if (event.target === modal) {
-                    closeModal();
-                }
-            });
-
-            // Login form
-            document.getElementById('loginForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const email = document.getElementById('loginEmail').value;
-                const password = document.getElementById('loginPassword').value;
-                
-                if (!validateEmail(email)) {
-                    showAuthAlert('Por favor, insira um e-mail válido.', 'error');
-                    return;
-                }
-                
-                setButtonLoading('loginBtn', true);
-                hideAuthAlert();
-                
-                try {
-                    await apiLogin(email, password);
-                    showAuthAlert('Login realizado com sucesso!', 'success');
-                } catch (error) {
-                    showAuthAlert(error.message, 'error');
-                } finally {
-                    setButtonLoading('loginBtn', false);
-                }
-            });
-
-            // Register form
-            document.getElementById('registerForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const formData = {
-                    name: document.getElementById('registerName').value,
-                    email: document.getElementById('registerEmail').value,
-                    phone: document.getElementById('registerPhone').value,
-                    clinic: document.getElementById('registerClinic').value,
-                    password: document.getElementById('registerPassword').value
-                };
-                
-                const confirmPassword = document.getElementById('registerConfirmPassword').value;
-                
-                if (!validateEmail(formData.email)) {
-                    showAuthAlert('Por favor, insira um e-mail válido.', 'error');
-                    return;
-                }
-                
-                if (formData.password.length < 6) {
-                    showAuthAlert('A senha deve ter pelo menos 6 caracteres.', 'error');
-                    return;
-                }
-                
-                if (formData.password !== confirmPassword) {
-                    showAuthAlert('As senhas não coincidem.', 'error');
-                    return;
-                }
-                
-                setButtonLoading('registerBtn', true);
-                hideAuthAlert();
-                
-                try {
-                    await apiRegister(formData);
-                    showAuthAlert(
-                        `Conta criada com sucesso! Um e-mail de confirmação foi enviado para ${formData.email}.`, 
-                        'success'
-                    );
-                    
-                    document.getElementById('registerForm').reset();
-                    updatePasswordStrength();
-                    
-                    setTimeout(() => switchAuthTab('login'), 3000);
-                    
-                } catch (error) {
-                    showAuthAlert(error.message, 'error');
-                } finally {
-                    setButtonLoading('registerBtn', false);
-                }
-            });
-
-            // Password strength
-            document.getElementById('registerPassword').addEventListener('input', updatePasswordStrength);
-            
-            console.log('Event listeners configurados');
-        }
-
-        // === INICIALIZAÇÃO ===
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Flash Leads iniciando...');
-            
-            // Aguardar carregamento do Supabase antes de inicializar
-            waitForSupabase(initializeSystem);
-        });
-
-        // Tornar funções globais
-        window.switchAuthTab = switchAuthTab;
-        window.showForgotPassword = showForgotPassword;
-        window.logout = logout;
-        window.markAsScheduled = markAsScheduled;
-        window.sendReminder = sendReminder;
-        window.editLead = editLead;
-        window.deleteLead = deleteLead;
-        window.markAttendance = markAttendance;
-        window.createGoogleCalendarEvent = createGoogleCalendarEvent;
-        window.scheduleOnlyQuick = scheduleOnlyQuick;
-        window.filterByPeriod = filterByPeriod;
-        window.toggleCustomPeriod = toggleCustomPeriod;
-        window.applyCustomPeriod = applyCustomPeriod;
-        window.clearCustomPeriod = clearCustomPeriod;
-        window.saveSettingsModal = saveSettingsModal;
-        window.generateReport = generateReport;
-        window.removeModal = removeModal;
-
-        console.log('✅ Flash Leads script carregado');
-    </script>
-</body>
-</html><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -1444,22 +19,38 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+            overflow-x: hidden;
         }
 
-        /* Loading screen */
-        .loading-screen {
+        /* === ISOLAMENTO COMPLETO DAS TELAS === */
+        .screen {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: none;
+            z-index: 1000;
+        }
+
+        .screen.active {
             display: flex;
+        }
+
+        /* Garantir que apenas uma tela seja visível por vez */
+        .screen:not(.active) {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+
+        /* Loading Screen */
+        #loadingScreen {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 9999;
+            z-index: 10000;
             color: white;
         }
 
@@ -1478,15 +69,22 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
             100% { transform: rotate(360deg); }
         }
 
-        /* === ESTILOS DE AUTENTICAÇÃO === */
-        .auth-container {
+        /* Auth Screen */
+        #authScreen {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+
+        .auth-box {
             max-width: 400px;
-            margin: 50px auto;
+            width: 100%;
             background: white;
             border-radius: 15px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.15);
             overflow: hidden;
-            position: relative;
         }
 
         .auth-header {
@@ -1683,40 +281,24 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
         .strength-good { background: #f1c40f; width: 75%; }
         .strength-strong { background: #27ae60; width: 100%; }
 
-        /* Responsividade para autenticação */
-        @media (max-width: 480px) {
-            .auth-container {
-                padding: 10px;
-            }
-            
-            .auth-box {
-                max-width: 100%;
-            }
-            
-            .auth-content {
-                padding: 20px;
-            }
-            
-            .auth-header {
-                padding: 20px;
-            }
-            
-            .auth-header h1 {
-                font-size: 1.6em;
-            }
+        /* Main App Screen */
+        #mainScreen {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            z-index: 1001;
+            padding: 20px;
+            overflow-y: auto;
         }
 
-        /* === ESTILOS ORIGINAIS === */
         .container {
             max-width: 1400px;
-            margin: 0 auto;
+            width: 100%;
             background: white;
             border-radius: 15px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             overflow: hidden;
-            display: none; /* Inicialmente oculto até login */
-            position: relative;
-            z-index: 1;
         }
 
         .header {
@@ -1953,7 +535,7 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.5);
-            z-index: 1000;
+            z-index: 11000;
         }
 
         .modal-content {
@@ -2150,6 +732,10 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
                 padding: 14px 20px;
                 font-size: 16px;
             }
+
+            .auth-box {
+                margin: 10px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -2160,19 +746,23 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
             .header h1 {
                 font-size: 1.5em;
             }
+
+            .auth-header h1 {
+                font-size: 1.6em;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Loading Screen -->
-    <div id="loadingScreen" class="loading-screen">
+    <!-- === LOADING SCREEN === -->
+    <div id="loadingScreen" class="screen active">
         <div class="loading-spinner"></div>
         <h2>⚡ Flash Leads</h2>
         <p>Carregando sistema...</p>
     </div>
 
-    <!-- === ÁREA DE AUTENTICAÇÃO === -->
-    <div id="authContainer" class="auth-container" style="display: none;">
+    <!-- === AUTH SCREEN === -->
+    <div id="authScreen" class="screen">
         <div class="auth-box">
             <div class="auth-header">
                 <h1>⚡ Flash Leads</h1>
@@ -2191,185 +781,839 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
                     </div>
                 </div>
 
-            <!-- Formulário de Login -->
-            <form id="loginForm" class="auth-form active">
-                <div class="auth-form-group">
-                    <label for="loginEmail">E-mail</label>
-                    <input type="email" id="loginEmail" required placeholder="seu@email.com">
-                </div>
-                <div class="auth-form-group">
-                    <label for="loginPassword">Senha</label>
-                    <input type="password" id="loginPassword" required placeholder="Sua senha">
-                </div>
-                <button type="submit" class="auth-btn" id="loginBtn">
-                    <div class="btn-loading">
-                        <div class="loading-spinner-small"></div>
-                        <span>Entrar</span>
+                <!-- Formulário de Login -->
+                <form id="loginForm" class="auth-form active">
+                    <div class="auth-form-group">
+                        <label for="loginEmail">E-mail</label>
+                        <input type="email" id="loginEmail" required placeholder="seu@email.com">
                     </div>
-                </button>
-                <div class="auth-links">
-                    <a href="#" onclick="showForgotPassword()">Esqueci minha senha</a>
-                </div>
-            </form>
-
-            <!-- Formulário de Cadastro -->
-            <form id="registerForm" class="auth-form">
-                <div class="auth-form-group">
-                    <label for="registerName">Nome Completo</label>
-                    <input type="text" id="registerName" required placeholder="Dr. João Silva">
-                </div>
-                <div class="auth-form-group">
-                    <label for="registerEmail">E-mail</label>
-                    <input type="email" id="registerEmail" required placeholder="seu@email.com">
-                </div>
-                <div class="auth-form-group">
-                    <label for="registerPhone">Telefone/WhatsApp</label>
-                    <input type="tel" id="registerPhone" required placeholder="(11) 99999-9999">
-                </div>
-                <div class="auth-form-group">
-                    <label for="registerClinic">Nome da Clínica</label>
-                    <input type="text" id="registerClinic" required placeholder="Clínica Odontológica">
-                </div>
-                <div class="auth-form-group">
-                    <label for="registerPassword">Senha</label>
-                    <input type="password" id="registerPassword" required placeholder="Mínimo 6 caracteres" minlength="6">
-                    <div class="password-strength">
-                        <div class="strength-bar">
-                            <div id="strengthFill" class="strength-fill"></div>
+                    <div class="auth-form-group">
+                        <label for="loginPassword">Senha</label>
+                        <input type="password" id="loginPassword" required placeholder="Sua senha">
+                    </div>
+                    <button type="submit" class="auth-btn" id="loginBtn">
+                        <div class="btn-loading">
+                            <div class="loading-spinner-small"></div>
+                            <span>Entrar</span>
                         </div>
-                        <div id="strengthText" style="margin-top: 4px; font-size: 12px;"></div>
+                    </button>
+                    <div class="auth-links">
+                        <a href="#" onclick="showForgotPassword()">Esqueci minha senha</a>
+                    </div>
+                </form>
+
+                <!-- Formulário de Cadastro -->
+                <form id="registerForm" class="auth-form">
+                    <div class="auth-form-group">
+                        <label for="registerName">Nome Completo</label>
+                        <input type="text" id="registerName" required placeholder="Dr. João Silva">
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="registerEmail">E-mail</label>
+                        <input type="email" id="registerEmail" required placeholder="seu@email.com">
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="registerPhone">Telefone/WhatsApp</label>
+                        <input type="tel" id="registerPhone" required placeholder="(11) 99999-9999">
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="registerClinic">Nome da Clínica</label>
+                        <input type="text" id="registerClinic" required placeholder="Clínica Odontológica">
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="registerPassword">Senha</label>
+                        <input type="password" id="registerPassword" required placeholder="Mínimo 6 caracteres" minlength="6">
+                        <div class="password-strength">
+                            <div class="strength-bar">
+                                <div id="strengthFill" class="strength-fill"></div>
+                            </div>
+                            <div id="strengthText" style="margin-top: 4px; font-size: 12px;"></div>
+                        </div>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="registerConfirmPassword">Confirmar Senha</label>
+                        <input type="password" id="registerConfirmPassword" required placeholder="Digite a senha novamente">
+                    </div>
+                    <button type="submit" class="auth-btn" id="registerBtn">
+                        <div class="btn-loading">
+                            <div class="loading-spinner-small"></div>
+                            <span>Criar Conta</span>
+                        </div>
+                    </button>
+                    <div class="auth-links">
+                        <a href="#" onclick="switchAuthTab('login')">Já tenho uma conta</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- === MAIN APP SCREEN === -->
+    <div id="mainScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button class="logout-btn" onclick="logout()">Sair</button>
+                <h1>⚡ Flash Leads</h1>
+                <p>Sistema Inteligente de Gestão de Leads Odontológicos</p>
+            </div>
+
+            <div class="controls">
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalLeads">0</div>
+                        <div class="stat-label">Total de Leads</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="novosLeads">0</div>
+                        <div class="stat-label">Leads Novos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="agendadosLeads">0</div>
+                        <div class="stat-label">Agendados</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="compareceuLeads">0</div>
+                        <div class="stat-label">Compareceram</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="faltouLeads">0</div>
+                        <div class="stat-label">Faltaram</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="leadsMes">0</div>
+                        <div class="stat-label">Leads Este Mês</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="taxaAgendamento">0%</div>
+                        <div class="stat-label">Taxa de Agendamento</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="taxaComparecimento">0%</div>
+                        <div class="stat-label">Taxa de Comparecimento</div>
                     </div>
                 </div>
-                <div class="auth-form-group">
-                    <label for="registerConfirmPassword">Confirmar Senha</label>
-                    <input type="password" id="registerConfirmPassword" required placeholder="Digite a senha novamente">
-                </div>
-                <button type="submit" class="auth-btn" id="registerBtn">
-                    <div class="btn-loading">
-                        <div class="loading-spinner-small"></div>
-                        <span>Criar Conta</span>
+
+                <div class="controls-top">
+                    <div class="search-container">
+                        <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar por nome ou telefone...">
+                        <div class="status-filter">
+                            <label>Filtrar por status:</label>
+                            <select id="statusFilter">
+                                <option value="">Todos os status</option>
+                                <option value="novo">Novo</option>
+                                <option value="em-atendimento">Em atendimento</option>
+                                <option value="agendado">Agendado</option>
+                                <option value="compareceu">Compareceu</option>
+                                <option value="faltou">Faltou</option>
+                                <option value="perdido">Perdido</option>
+                            </select>
+                        </div>
                     </div>
+                    
+                    <div class="period-filter">
+                        <label><strong>Filtrar por período:</strong></label>
+                        <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center;">
+                            <button class="btn btn-info period-btn active" data-period="all" onclick="filterByPeriod('all')">
+                                Todos
+                            </button>
+                            <button class="btn btn-info period-btn" data-period="today" onclick="filterByPeriod('today')">
+                                Hoje
+                            </button>
+                            <button class="btn btn-info period-btn" data-period="week" onclick="filterByPeriod('week')">
+                                Esta Semana
+                            </button>
+                            <button class="btn btn-info period-btn" data-period="month" onclick="filterByPeriod('month')">
+                                Este Mês
+                            </button>
+                            <button class="btn btn-info period-btn" data-period="quarter" onclick="filterByPeriod('quarter')">
+                                Trimestre
+                            </button>
+                            <button class="btn btn-info period-btn" data-period="custom" onclick="toggleCustomPeriod()">
+                                📅 Personalizado
+                            </button>
+                        </div>
+                        
+                        <div id="customPeriodContainer" style="display: none; margin-top: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                <label>De:</label>
+                                <input type="date" id="customStartDate" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <label>Até:</label>
+                                <input type="date" id="customEndDate" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <button class="btn btn-warning" onclick="applyCustomPeriod()">
+                                    Aplicar Filtro
+                                </button>
+                                <button class="btn btn-info" onclick="clearCustomPeriod()">
+                                    Limpar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" id="addLeadBtn" onclick="openAddLeadModal()">
+                            ➕ Adicionar Lead
+                        </button>
+                        <button class="btn btn-info" onclick="exportToCSV()">
+                            📊 Exportar CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div id="leadsContainer">
+                    <div class="no-leads">
+                        <h3>Nenhum lead encontrado</h3>
+                        <p>Adicione seu primeiro lead para começar!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- === MODAIS === -->
+    <!-- Modal Adicionar/Editar Lead -->
+    <div id="leadModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Adicionar Lead</h3>
+                <span class="close" onclick="closeModal('leadModal')">&times;</span>
+            </div>
+            <form id="leadForm">
+                <div class="form-group">
+                    <label for="leadName">Nome *</label>
+                    <input type="text" id="leadName" required placeholder="Nome completo">
+                </div>
+                <div class="form-group">
+                    <label for="leadPhone">Telefone/WhatsApp *</label>
+                    <input type="tel" id="leadPhone" required placeholder="(11) 99999-9999">
+                </div>
+                <div class="form-group">
+                    <label for="leadEmail">E-mail</label>
+                    <input type="email" id="leadEmail" placeholder="email@exemplo.com">
+                </div>
+                <div class="form-group">
+                    <label for="leadSource">Origem do Lead</label>
+                    <select id="leadSource">
+                        <option value="instagram">Instagram</option>
+                        <option value="facebook">Facebook</option>
+                        <option value="google">Google Ads</option>
+                        <option value="indicacao">Indicação</option>
+                        <option value="site">Site</option>
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="outros">Outros</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="leadStatus">Status</label>
+                    <select id="leadStatus">
+                        <option value="novo">Novo</option>
+                        <option value="em-atendimento">Em atendimento</option>
+                        <option value="agendado">Agendado</option>
+                        <option value="compareceu">Compareceu</option>
+                        <option value="faltou">Faltou</option>
+                        <option value="perdido">Perdido</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="leadNotes">Observações</label>
+                    <textarea id="leadNotes" placeholder="Observações sobre o lead..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="leadDate">Data de Agendamento</label>
+                    <input type="datetime-local" id="leadDate">
+                </div>
+                <button type="submit" class="btn btn-primary" id="saveLeadBtn">
+                    Salvar Lead
                 </button>
-                <div class="auth-links">
-                    <a href="#" onclick="switchAuthTab('login')">Já tenho uma conta</a>
-                </div>
             </form>
         </div>
     </div>
 
-    <!-- === SISTEMA PRINCIPAL === -->
-    <div class="container" id="mainContainer">
-        <div class="header">
-            <button class="logout-btn" onclick="logout()">Sair</button>
-            <h1>⚡ Flash Leads</h1>
-            <p>Sistema Inteligente de Gestão de Leads Odontológicos</p>
-        </div>
+    <!-- JavaScript -->
+    <script>
+        // === CONFIGURAÇÃO SUPABASE ===
+        const SUPABASE_URL = 'https://bjqfxroulfxyqhqopnns.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcWZ4cm91bGZ4eXFocW9wbm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNTkzODEsImV4cCI6MjA2ODgzNTM4MX0.7TRJhwzvbHK23rQP2T6azq6c2mVSDPBgfgwadpZxbjg';
+        const supabase = window.supabase.createClient(https://bjqfxroulfxyqhqopnns.supabase.co, eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcWZ4cm91bGZ4eXFocW9wbm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNTkzODEsImV4cCI6MjA2ODgzNTM4MX0.7TRJhwzvbHK23rQP2T6azq6c2mVSDPBgfgwadpZxbjg);
 
-        <div class="controls">
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-number" id="totalLeads">0</div>
-                    <div class="stat-label">Total de Leads</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="novosLeads">0</div>
-                    <div class="stat-label">Leads Novos</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="agendadosLeads">0</div>
-                    <div class="stat-label">Agendados</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="compareceuLeads">0</div>
-                    <div class="stat-label">Compareceram</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="faltouLeads">0</div>
-                    <div class="stat-label">Faltaram</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="leadsMes">0</div>
-                    <div class="stat-label">Leads Este Mês</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="taxaAgendamento">0%</div>
-                    <div class="stat-label">Taxa de Agendamento</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="taxaComparecimento">0%</div>
-                    <div class="stat-label">Taxa de Comparecimento</div>
-                </div>
-            </div>
+        // === VARIÁVEIS GLOBAIS ===
+        let currentUser = null;
+        let allLeads = [];
+        let filteredLeads = [];
+        let currentEditingLeadId = null;
+        let currentPeriod = 'all';
 
-            <div class="controls-top">
-                <div class="search-container">
-                    <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar por nome ou telefone...">
-                    <div class="status-filter">
-                        <label>Filtrar por status:</label>
-                        <select id="statusFilter">
-                            <option value="">Todos os status</option>
-                            <option value="novo">Novo</option>
-                            <option value="em-atendimento">Em atendimento</option>
-                            <option value="agendado">Agendado</option>
-                            <option value="compareceu">Compareceu</option>
-                            <option value="faltou">Faltou</option>
-                            <option value="perdido">Perdido</option>
-                        </select>
-                    </div>
-                </div>
+        // === SISTEMA DE TELAS ===
+        function showScreen(screenId) {
+            // Esconder todas as telas
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            // Mostrar a tela solicitada
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+            }
+        }
+
+        // === INICIALIZAÇÃO ===
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                checkAuthStatus();
+            }, 1500);
+        });
+
+        async function checkAuthStatus() {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
                 
-                <div class="period-filter">
-                    <label><strong>Filtrar por período:</strong></label>
-                    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center;">
-                        <button class="btn btn-info period-btn active" data-period="all" onclick="filterByPeriod('all')">
-                            Todos
-                        </button>
-                        <button class="btn btn-info period-btn" data-period="today" onclick="filterByPeriod('today')">
-                            Hoje
-                        </button>
-                        <button class="btn btn-info period-btn" data-period="week" onclick="filterByPeriod('week')">
-                            Esta Semana
-                        </button>
-                        <button class="btn btn-info period-btn" data-period="month" onclick="filterByPeriod('month')">
-                            Este Mês
-                        </button>
-                        <button class="btn btn-info period-btn" data-period="quarter" onclick="filterByPeriod('quarter')">
-                            Trimestre
-                        </button>
-                        <button class="btn btn-info period-btn" data-period="custom" onclick="toggleCustomPeriod()">
-                            📅 Personalizado
-                        </button>
+                if (user) {
+                    currentUser = user;
+                    showScreen('mainScreen');
+                    await loadLeads();
+                } else {
+                    showScreen('authScreen');
+                }
+            } catch (error) {
+                console.error('Erro ao verificar autenticação:', error);
+                showScreen('authScreen');
+            }
+        }
+
+        // === SISTEMA DE AUTENTICAÇÃO ===
+        function switchAuthTab(tab) {
+            // Atualizar tabs
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[onclick="switchAuthTab('${tab}')"]`).classList.add('active');
+            
+            // Atualizar formulários
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+            document.getElementById(tab + 'Form').classList.add('active');
+            
+            hideAlert();
+        }
+
+        function showAlert(message, type = 'info') {
+            const alert = document.getElementById('authAlert');
+            alert.textContent = message;
+            alert.className = `auth-alert ${type}`;
+            alert.style.display = 'block';
+        }
+
+        function hideAlert() {
+            const alert = document.getElementById('authAlert');
+            alert.style.display = 'none';
+        }
+
+        // Login
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const btn = document.getElementById('loginBtn');
+            
+            setButtonLoading(btn, true);
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) throw error;
+                
+                currentUser = data.user;
+                showScreen('mainScreen');
+                await loadLeads();
+                
+            } catch (error) {
+                showAlert(error.message, 'error');
+            } finally {
+                setButtonLoading(btn, false);
+            }
+        });
+
+        // Registro
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const phone = document.getElementById('registerPhone').value;
+            const clinic = document.getElementById('registerClinic').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirmPassword').value;
+            const btn = document.getElementById('registerBtn');
+            
+            if (password !== confirmPassword) {
+                showAlert('As senhas não coincidem!', 'error');
+                return;
+            }
+            
+            setButtonLoading(btn, true);
+            
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            name: name,
+                            phone: phone,
+                            clinic: clinic
+                        }
+                    }
+                });
+                
+                if (error) throw error;
+                
+                showAlert('Conta criada com sucesso! Verifique seu email para confirmar.', 'success');
+                setTimeout(() => switchAuthTab('login'), 2000);
+                
+            } catch (error) {
+                showAlert(error.message, 'error');
+            } finally {
+                setButtonLoading(btn, false);
+            }
+        });
+
+        function setButtonLoading(button, loading) {
+            const spinner = button.querySelector('.loading-spinner-small');
+            if (loading) {
+                spinner.style.display = 'block';
+                button.disabled = true;
+            } else {
+                spinner.style.display = 'none';
+                button.disabled = false;
+            }
+        }
+
+        // Logout
+        async function logout() {
+            try {
+                await supabase.auth.signOut();
+                currentUser = null;
+                showScreen('authScreen');
+            } catch (error) {
+                console.error('Erro ao fazer logout:', error);
+            }
+        }
+
+        // === GESTÃO DE LEADS ===
+        async function loadLeads() {
+            try {
+                const { data, error } = await supabase
+                    .from('leads')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                allLeads = data || [];
+                applyFilters();
+                updateStats();
+                
+            } catch (error) {
+                console.error('Erro ao carregar leads:', error);
+                allLeads = [];
+                renderLeads();
+            }
+        }
+
+        function applyFilters() {
+            let filtered = [...allLeads];
+            
+            // Filtro de busca
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            if (searchTerm) {
+                filtered = filtered.filter(lead => 
+                    lead.name.toLowerCase().includes(searchTerm) ||
+                    lead.phone.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // Filtro de status
+            const statusFilter = document.getElementById('statusFilter').value;
+            if (statusFilter) {
+                filtered = filtered.filter(lead => lead.status === statusFilter);
+            }
+            
+            // Filtro de período
+            filtered = applyPeriodFilter(filtered);
+            
+            filteredLeads = filtered;
+            renderLeads();
+        }
+
+        function applyPeriodFilter(leads) {
+            if (currentPeriod === 'all') return leads;
+            
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            return leads.filter(lead => {
+                const leadDate = new Date(lead.created_at);
+                const leadDateOnly = new Date(leadDate.getFullYear(), leadDate.getMonth(), leadDate.getDate());
+                
+                switch (currentPeriod) {
+                    case 'today':
+                        return leadDateOnly.getTime() === today.getTime();
+                    case 'week':
+                        const weekAgo = new Date(today);
+                        weekAgo.setDate(today.getDate() - 7);
+                        return leadDate >= weekAgo;
+                    case 'month':
+                        const monthAgo = new Date(today);
+                        monthAgo.setMonth(today.getMonth() - 1);
+                        return leadDate >= monthAgo;
+                    case 'quarter':
+                        const quarterAgo = new Date(today);
+                        quarterAgo.setMonth(today.getMonth() - 3);
+                        return leadDate >= quarterAgo;
+                    case 'custom':
+                        const startDate = document.getElementById('customStartDate').value;
+                        const endDate = document.getElementById('customEndDate').value;
+                        if (startDate && endDate) {
+                            const start = new Date(startDate);
+                            const end = new Date(endDate);
+                            end.setHours(23, 59, 59, 999);
+                            return leadDate >= start && leadDate <= end;
+                        }
+                        return true;
+                    default:
+                        return true;
+                }
+            });
+        }
+
+        function renderLeads() {
+            const container = document.getElementById('leadsContainer');
+            
+            if (filteredLeads.length === 0) {
+                container.innerHTML = `
+                    <div class="no-leads">
+                        <h3>Nenhum lead encontrado</h3>
+                        <p>Adicione seu primeiro lead para começar!</p>
                     </div>
+                `;
+                return;
+            }
+            
+            const table = `
+                <table class="leads-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Telefone</th>
+                            <th>E-mail</th>
+                            <th>Origem</th>
+                            <th>Status</th>
+                            <th>Data</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filteredLeads.map(lead => `
+                            <tr>
+                                <td><strong>${lead.name}</strong></td>
+                                <td>${lead.phone}</td>
+                                <td>${lead.email || '-'}</td>
+                                <td>${lead.source}</td>
+                                <td><span class="status-badge status-${lead.status}">${getStatusLabel(lead.status)}</span></td>
+                                <td>${formatDate(lead.created_at)}</td>
+                                <td>
+                                    <div class="actions">
+                                        <button class="btn btn-info" onclick="editLead(${lead.id})">
+                                            Editar
+                                        </button>
+                                        <button class="btn btn-success" onclick="updateStatus(${lead.id}, 'agendado')">
+                                            Agendar
+                                        </button>
+                                        <button class="btn btn-warning" onclick="updateStatus(${lead.id}, 'compareceu')">
+                                            Compareceu
+                                        </button>
+                                        <button class="btn btn-danger" onclick="deleteLead(${lead.id})">
+                                            Excluir
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = table;
+        }
+
+        function getStatusLabel(status) {
+            const labels = {
+                'novo': 'Novo',
+                'em-atendimento': 'Em Atendimento',
+                'agendado': 'Agendado',
+                'compareceu': 'Compareceu',
+                'faltou': 'Faltou',
+                'perdido': 'Perdido'
+            };
+            return labels[status] || status;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function updateStats() {
+            const total = allLeads.length;
+            const novos = allLeads.filter(l => l.status === 'novo').length;
+            const agendados = allLeads.filter(l => l.status === 'agendado').length;
+            const compareceu = allLeads.filter(l => l.status === 'compareceu').length;
+            const faltou = allLeads.filter(l => l.status === 'faltou').length;
+            
+            const now = new Date();
+            const thisMonth = allLeads.filter(l => {
+                const leadDate = new Date(l.created_at);
+                return leadDate.getMonth() === now.getMonth() && leadDate.getFullYear() === now.getFullYear();
+            }).length;
+            
+            const taxaAgendamento = total > 0 ? Math.round(((agendados + compareceu + faltou) / total) * 100) : 0;
+            const taxaComparecimento = (agendados + compareceu + faltou) > 0 ? Math.round((compareceu / (agendados + compareceu + faltou)) * 100) : 0;
+            
+            document.getElementById('totalLeads').textContent = total;
+            document.getElementById('novosLeads').textContent = novos;
+            document.getElementById('agendadosLeads').textContent = agendados;
+            document.getElementById('compareceuLeads').textContent = compareceu;
+            document.getElementById('faltouLeads').textContent = faltou;
+            document.getElementById('leadsMes').textContent = thisMonth;
+            document.getElementById('taxaAgendamento').textContent = taxaAgendamento + '%';
+            document.getElementById('taxaComparecimento').textContent = taxaComparecimento + '%';
+        }
+
+        // === FILTROS E CONTROLES ===
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+
+        function filterByPeriod(period) {
+            currentPeriod = period;
+            
+            // Atualizar botões
+            document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-period="${period}"]`).classList.add('active');
+            
+            // Esconder/mostrar período customizado
+            const customContainer = document.getElementById('customPeriodContainer');
+            customContainer.style.display = period === 'custom' ? 'block' : 'none';
+            
+            applyFilters();
+        }
+
+        function toggleCustomPeriod() {
+            const container = document.getElementById('customPeriodContainer');
+            const isVisible = container.style.display === 'block';
+            container.style.display = isVisible ? 'none' : 'block';
+            
+            if (!isVisible) {
+                filterByPeriod('custom');
+            }
+        }
+
+        function applyCustomPeriod() {
+            const startDate = document.getElementById('customStartDate').value;
+            const endDate = document.getElementById('customEndDate').value;
+            
+            if (!startDate || !endDate) {
+                alert('Por favor, selecione as datas de início e fim.');
+                return;
+            }
+            
+            if (new Date(startDate) > new Date(endDate)) {
+                alert('A data de início deve ser anterior à data de fim.');
+                return;
+            }
+            
+            currentPeriod = 'custom';
+            applyFilters();
+        }
+
+        function clearCustomPeriod() {
+            document.getElementById('customStartDate').value = '';
+            document.getElementById('customEndDate').value = '';
+            filterByPeriod('all');
+        }
+
+        // === MODAIS ===
+        function openAddLeadModal() {
+            currentEditingLeadId = null;
+            document.getElementById('modalTitle').textContent = 'Adicionar Lead';
+            document.getElementById('leadForm').reset();
+            document.getElementById('leadModal').style.display = 'block';
+        }
+
+        function editLead(leadId) {
+            const lead = allLeads.find(l => l.id === leadId);
+            if (!lead) return;
+            
+            currentEditingLeadId = leadId;
+            document.getElementById('modalTitle').textContent = 'Editar Lead';
+            
+            document.getElementById('leadName').value = lead.name;
+            document.getElementById('leadPhone').value = lead.phone;
+            document.getElementById('leadEmail').value = lead.email || '';
+            document.getElementById('leadSource').value = lead.source;
+            document.getElementById('leadStatus').value = lead.status;
+            document.getElementById('leadNotes').value = lead.notes || '';
+            document.getElementById('leadDate').value = lead.appointment_date || '';
+            
+            document.getElementById('leadModal').style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Salvar lead
+        document.getElementById('leadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const leadData = {
+                name: document.getElementById('leadName').value,
+                phone: document.getElementById('leadPhone').value,
+                email: document.getElementById('leadEmail').value || null,
+                source: document.getElementById('leadSource').value,
+                status: document.getElementById('leadStatus').value,
+                notes: document.getElementById('leadNotes').value || null,
+                appointment_date: document.getElementById('leadDate').value || null,
+                user_id: currentUser.id
+            };
+            
+            try {
+                if (currentEditingLeadId) {
+                    // Atualizar lead existente
+                    const { error } = await supabase
+                        .from('leads')
+                        .update(leadData)
+                        .eq('id', currentEditingLeadId);
                     
-                    <div id="customPeriodContainer" style="display: none; margin-top: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                            <label>De:</label>
-                            <input type="date" id="customStartDate" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                            <label>Até:</label>
-                            <input type="date" id="customEndDate" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                            <button class="btn btn-warning" onclick="applyCustomPeriod()">
-                                Aplicar Filtro
-                            </button>
-                            <button class="btn btn-info" onclick="clearCustomPeriod()">
-                                Limpar
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                    if (error) throw error;
+                } else {
+                    // Criar novo lead
+                    const { error } = await supabase
+                        .from('leads')
+                        .insert([leadData]);
+                    
+                    if (error) throw error;
+                }
                 
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn btn-primary" id="addLeadBtn">
-                        ➕ Adicionar Novo Lead
-                    </button>
-                    <button class="btn btn-info" id="settingsBtn">
-                        ⚙️ Configurações
-                    </button>
-                    <button class="btn btn-warning" id="reportsBtn">
-                        📊 Relatórios
-                    </button>
-                    <button class="btn btn-success" id="refreshBtn">
-                        🔄 Atualizar
-                    </button>
-                </div>
-            </div>
-        </div
+                closeModal('leadModal');
+                await loadLeads();
+                
+            } catch (error) {
+                console.error('Erro ao salvar lead:', error);
+                alert('Erro ao salvar lead: ' + error.message);
+            }
+        });
+
+        // Atualizar status
+        async function updateStatus(leadId, newStatus) {
+            try {
+                const { error } = await supabase
+                    .from('leads')
+                    .update({ status: newStatus })
+                    .eq('id', leadId);
+                
+                if (error) throw error;
+                
+                await loadLeads();
+                
+            } catch (error) {
+                console.error('Erro ao atualizar status:', error);
+                alert('Erro ao atualizar status: ' + error.message);
+            }
+        }
+
+        // Deletar lead
+        async function deleteLead(leadId) {
+            if (!confirm('Tem certeza que deseja excluir este lead?')) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('leads')
+                    .delete()
+                    .eq('id', leadId);
+                
+                if (error) throw error;
+                
+                await loadLeads();
+                
+            } catch (error) {
+                console.error('Erro ao deletar lead:', error);
+                alert('Erro ao deletar lead: ' + error.message);
+            }
+        }
+
+        // Exportar CSV
+        function exportToCSV() {
+            if (filteredLeads.length === 0) {
+                alert('Nenhum lead para exportar!');
+                return;
+            }
+            
+            const headers = ['Nome', 'Telefone', 'E-mail', 'Origem', 'Status', 'Data de Criação', 'Observações'];
+            const csvContent = [
+                headers.join(','),
+                ...filteredLeads.map(lead => [
+                    `"${lead.name}"`,
+                    `"${lead.phone}"`,
+                    `"${lead.email || ''}"`,
+                    `"${lead.source}"`,
+                    `"${getStatusLabel(lead.status)}"`,
+                    `"${formatDate(lead.created_at)}"`,
+                    `"${lead.notes || ''}"`
+                ].join(','))
+            ].join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `leads_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+
+        // Fechar modal clicando fora
+        window.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal')) {
+                e.target.style.display = 'none';
+            }
+        });
+
+        // Verificador de força da senha
+        document.getElementById('registerPassword').addEventListener('input', function(e) {
+            const password = e.target.value;
+            const strengthFill = document.getElementById('strengthFill');
+            const strengthText = document.getElementById('strengthText');
+            
+            if (password.length === 0) {
+                strengthFill.className = 'strength-fill';
+                strengthText.textContent = '';
+                return;
+            }
+            
+            let strength = 0;
+            if (password.length >= 6) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^A-Za-z0-9]/.test(password)) strength++;
+            
+            const classes = ['strength-weak', 'strength-fair', 'strength-good', 'strength-strong'];
+            const texts = ['Fraca', 'Regular', 'Boa', 'Forte'];
+            
+            strengthFill.className = `strength-fill ${classes[strength - 1] || 'strength-weak'}`;
+            strengthText.textContent = `Força da senha: ${texts[strength - 1] || 'Muito fraca'}`;
+        });
+    </script>
+</body>
+</html>
