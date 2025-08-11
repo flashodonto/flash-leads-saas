@@ -1085,20 +1085,37 @@
 
         // === FUNÇÕES DE CONTROLE DE TELA ===
         function showScreen(screenName) {
+            console.log(`📺 Mudando para tela: ${screenName}`);
+            
             // Esconder todas as telas
-            document.getElementById('loadingScreen').classList.add('hidden');
-            document.getElementById('authContainer').classList.add('hidden');
-            document.getElementById('mainContainer').classList.add('hidden');
+            const loadingScreen = document.getElementById('loadingScreen');
+            const authContainer = document.getElementById('authContainer');
+            const mainContainer = document.getElementById('mainContainer');
+            
+            if (loadingScreen) loadingScreen.classList.add('hidden');
+            if (authContainer) authContainer.classList.add('hidden');
+            if (mainContainer) mainContainer.classList.add('hidden');
             
             // Mostrar apenas a tela solicitada
-            if (screenName === 'loading') {
-                document.getElementById('loadingScreen').classList.remove('hidden');
-            } else if (screenName === 'auth') {
-                document.getElementById('authContainer').classList.remove('hidden');
-            } else if (screenName === 'main') {
-                document.getElementById('mainContainer').classList.remove('hidden');
-                document.getElementById('mainContainer').classList.add('active');
+            if (screenName === 'loading' && loadingScreen) {
+                loadingScreen.classList.remove('hidden');
+                console.log('✅ Tela de loading exibida');
+            } else if (screenName === 'auth' && authContainer) {
+                authContainer.classList.remove('hidden');
+                authContainer.classList.add('active');
+                console.log('✅ Tela de auth exibida');
+            } else if (screenName === 'main' && mainContainer) {
+                mainContainer.classList.remove('hidden');
+                mainContainer.classList.add('active');
+                console.log('✅ Tela principal exibida');
             }
+            
+            // Log para debug
+            console.log('Estado das telas:', {
+                loading: loadingScreen ? loadingScreen.classList.contains('hidden') : 'não encontrada',
+                auth: authContainer ? authContainer.classList.contains('hidden') : 'não encontrada',
+                main: mainContainer ? mainContainer.classList.contains('hidden') : 'não encontrada'
+            });
         }
 
         // === FUNÇÃO PARA AGUARDAR CARREGAMENTO DO SUPABASE ===
@@ -2506,19 +2523,90 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 Flash Leads iniciando...');
             
+            // Forçar exibição da tela de auth após 3 segundos como fallback
+            setTimeout(() => {
+                if (document.getElementById('loadingScreen').classList.contains('hidden') === false) {
+                    console.log('⚠️ Forçando exibição da tela de auth...');
+                    showAuthScreen();
+                }
+            }, 3000);
+            
             // Timeout de segurança - se não carregar em 5 segundos, força a tela de auth
             const safetyTimeout = setTimeout(() => {
                 console.warn('⚠️ Timeout de segurança ativado');
                 showAuthScreen();
-                alert('⚠️ O sistema demorou para carregar. Tente fazer login mesmo assim.');
             }, 5000);
             
-            // Aguardar carregamento do Supabase antes de inicializar
-            waitForSupabase(() => {
+            // Tentar inicializar imediatamente, sem esperar Supabase
+            try {
+                initializeSystemDirect();
                 clearTimeout(safetyTimeout);
-                initializeSystem();
-            });
+            } catch (error) {
+                console.error('Erro na inicialização direta:', error);
+                // Se falhar, aguardar Supabase
+                waitForSupabase(() => {
+                    clearTimeout(safetyTimeout);
+                    initializeSystem();
+                });
+            }
         });
+
+        // === INICIALIZAÇÃO DIRETA (SEM ESPERAR SUPABASE) ===
+        function initializeSystemDirect() {
+            console.log('🎯 Tentando inicialização direta...');
+            
+            // Se Supabase não estiver disponível, ir direto para modo demo
+            if (typeof window.supabase === 'undefined') {
+                console.log('Supabase não disponível, iniciando modo demo');
+                setTimeout(() => {
+                    showAuthScreenWithDemo();
+                }, 1000);
+                return;
+            }
+            
+            // Se Supabase estiver disponível, prosseguir normalmente
+            initializeSystem();
+        }
+
+        function showAuthScreenWithDemo() {
+            showScreen('auth');
+            
+            // Adicionar opção de modo demo
+            const authAlert = document.getElementById('authAlert');
+            authAlert.innerHTML = `
+                <div style="text-align: center;">
+                    <p>💡 <strong>Sistema Flash Leads</strong></p>
+                    <p>Faça login ou experimente o modo demonstração</p>
+                    <button onclick="initializeDemoMode()" class="btn btn-warning" style="margin-top: 10px; width: 100%;">
+                        🎯 Experimentar Modo Demo
+                    </button>
+                </div>
+            `;
+            authAlert.className = 'auth-alert info';
+            authAlert.style.display = 'block';
+            
+            // Configurar event listeners básicos
+            setupBasicEventListeners();
+        }
+
+        function setupBasicEventListeners() {
+            // Event listeners mínimos para funcionar
+            try {
+                document.getElementById('loginForm').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    showAuthAlert('Sistema em modo limitado. Use o modo demo.', 'error');
+                });
+                
+                document.getElementById('registerForm').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    showAuthAlert('Sistema em modo limitado. Use o modo demo.', 'error');
+                });
+                
+                console.log('Event listeners básicos configurados');
+            } catch (error) {
+                console.log('Erro ao configurar event listeners básicos:', error);
+            }
+        }
 
         // Tornar funções globais
         window.switchAuthTab = switchAuthTab;
@@ -2539,8 +2627,36 @@ ${notes ? 'Observações: ' + notes + '\n\n' : ''}Agendado via Flash Leads ⚡`;
         window.generateReport = generateReport;
         window.removeModal = removeModal;
         window.initializeDemoMode = initializeDemoMode;
+        window.showAuthScreen = showAuthScreen;
+        window.showScreen = showScreen;
+
+        // === EMERGÊNCIA: FORÇAR TELA DE LOGIN ===
+        // Se nada funcionar, esta função pode ser chamada no console
+        window.forceLoginScreen = function() {
+            console.log('🚨 EMERGÊNCIA: Forçando tela de login');
+            
+            // Remover todas as classes hidden
+            const elements = ['loadingScreen', 'authContainer', 'mainContainer'];
+            elements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.display = 'none';
+                }
+            });
+            
+            // Mostrar apenas a tela de auth
+            const authContainer = document.getElementById('authContainer');
+            if (authContainer) {
+                authContainer.style.display = 'block';
+                authContainer.classList.remove('hidden');
+                authContainer.classList.add('active');
+            }
+            
+            alert('🚨 Tela de login forçada! Se o problema persistir, recarregue a página.');
+        };
 
         console.log('✅ Flash Leads script carregado');
+        console.log('💡 Se a tela não aparecer, digite no console: forceLoginScreen()');
     </script>
 </body>
 </html>="btn btn-warning" onclick="applyCustomPeriod()">
